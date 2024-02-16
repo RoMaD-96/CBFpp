@@ -50,9 +50,9 @@ log_age_current <- log(current_data$age)
 #   STAN Parameter Configuration                                            ####
 
 N_0 <- length(log_age_hist)
-X_0 <- cbind(log_age_hist, # x1 - (standardized) age 
-             historical_data$sex, # x2 - gender (sex)
-             historical_data$trt # x3 performance status
+X_0 <- cbind(log_age_hist, # x1 - log age 
+             historical_data$sex, # x2 - gender
+             historical_data$trt # x3 treatment
 )
 Y_0_cens <- historical_data$survtime
 Cens_0 <- historical_data$scens

@@ -1,16 +1,14 @@
+#   ____________________________________________________________________________
+#   Libraries                                                               ####
+
 packages <- c(
   "rethinking",
-  "doFuture",
-  "parallel",
-  "doParallel",
-  "foreach",
+  "ggpubr",
   "rstan",
   "bridgesampling",
-  "future",
   "dplyr",
   "readxl",
   "progressr",
-  "patchwork",
   "ggplot2",
   "ggridges",
   "tidyverse",
@@ -28,46 +26,16 @@ if (any(installed_packages == FALSE)) {
 invisible(lapply(packages, library, character.only = TRUE))
 
 
-load("~/Desktop/Research_Project_PhD_Link/R_Projects/Power_Priors/Bayes_Factor/1.Main_Work_With_Ioannis/Uniform_Reference/Samples_From_Alternative/Melanoma/RData/Logit_VM.RData")
+source("R/CBF_Functions.R")
+
+
+load("R/Melanoma/RData/Logit_VM.RData")
 rm(list = setdiff(ls(), c("df_obs_bf","grid")))
 
 
-calculate_maximized_value <- function(distribution_values, observed_BF, hpdi_prob = 0.95) {
-  results <- numeric(length(observed_BF)) # Initialize a results vector
-  
-  # Calculate the number of distributions
-  num_distributions <- length(distribution_values) / length(observed_BF)
-  
-  for (i in seq_along(observed_BF)) {
-    # Select values for the current distribution
-    current_distribution_values <- distribution_values[((i - 1) * num_distributions + 1):(i * num_distributions)]
-    
-    # Calculate the CDF for the current distribution values
-    cdf_values <- ecdf(current_distribution_values)
-    
-    # Calculate the portion of the CDF greater than zero
-    portion_cdf_above_zero <-  1-cdf_values(0)
-    
-    # Calculate the HPDI
-    hpdi <- rethinking::HPDI(current_distribution_values, prob = hpdi_prob)
-    
-    # Check conditions and calculate the result
-    if (portion_cdf_above_zero >= 0.5 && observed_BF[i] >= hpdi[1] && observed_BF[i] <= hpdi[2]) {
-      results[i] <- portion_cdf_above_zero * observed_BF[i]
-    } else {
-      results[i] <- 0
-    }
-  }
-  
-  # Check if all results are zero
-  if (max(results) == 0) {
-    print("The model under the Null Hypothesis is optimal")
-  } else {
-    # Return the index of the maximum value in results
-    print(which.max(results))
-  }
-}
 
+#   ____________________________________________________________________________
+#   Optimal Model                                                           ####
 
 data_structure <- function(path, n_files){
   
@@ -124,7 +92,7 @@ data_structure <- function(path, n_files){
   return(bf_data_rep)
 }
 
-path <- "~/Desktop/Research_Project_PhD_Link/R_Projects/Power_Priors/Bayes_Factor/1.Main_Work_With_Ioannis/Uniform_Reference/Samples_From_Alternative/Melanoma/RData/"
+path <- "R/Melanoma/RData/"
 
 
 bf_data <- data_structure(path,48)
@@ -140,15 +108,12 @@ optimal_model_index <- calculate_maximized_value(bf_data_long$Value, df_obs_bf$o
 
 
 
-
-#   ____________________________________________________________________________
-#   Model computation                                                       ####
-
 #   ____________________________________________________________________________
 #   Datasets                                                                ####
+
 set.seed(478)
 
-data <- read_excel("1.Main_Work_With_Ioannis/Uniform_Reference/Samples_From_Alternative/Melanoma/Data/trial_e1684_e1690_Merged.xlsx", 
+data <- read_excel("Data/trial_e1684_e1690_Merged.xlsx", 
                    col_types = c("numeric", "numeric", "numeric", 
                                  "numeric", "numeric", "numeric", 
                                  "numeric", "numeric", "numeric", 
@@ -173,7 +138,7 @@ log_age_current <- log(current_data$age)
 J <- 20
 
 ### GAM Approximation ###
-constant_data <- read.csv("1.Main_Work_With_Ioannis/Uniform_Reference/Samples_From_Alternative/Melanoma/Data/delta_estimates_logit.csv")
+constant_data <- read.csv("Data/delta_estimates_logit.csv")
 fit_gam <- mgcv::gam(lc_a0 ~ s(a0, k = J + 1), data = constant_data)
 
 # mgcv::plot.gam(fit_gam)
@@ -183,18 +148,18 @@ fit_gam <- mgcv::gam(lc_a0 ~ s(a0, k = J + 1), data = constant_data)
 
 
 N_0 <- length(log_age_hist)
-X_0 <- cbind(log_age = log_age_hist, # x1 - (log) age 
-             sex = historical_data$sex, # x2 - gender (sex)
-             treat_status = historical_data$trt # x3 performance status
+X_0 <- cbind(log_age = log_age_hist, # x1 - log age 
+             sex = historical_data$sex, # x2 - gender 
+             treat_status = historical_data$trt # x3 treatment
 )
 Y_0_cens <- historical_data$survtime
 Cens_0 <- historical_data$scens
 
 
 N<- length(log_age_current)
-X <- cbind(log_age_current, # x1 - (log) age 
-           current_data$sex, # x2 - gender (sex)
-           current_data$trt # x3 performance status
+X <- cbind(log_age_current, # x1 - log age 
+           current_data$sex, # x2 - gender
+           current_data$trt # x3 treatment
 )
 Y_cens <- current_data$survtime
 Cens<- current_data$scens
@@ -203,8 +168,8 @@ Cens<- current_data$scens
 #   ____________________________________________________________________________
 #   Model Specification                                                     ####
 
-stan_model <- list("1.Main_Work_With_Ioannis/Uniform_Reference/Samples_From_Alternative/Melanoma/STAN/Logit_Sim_Norm_PP.stan")
-source("~/Desktop/Research_Project_PhD_Link/R_Projects/Power_Priors/Power_Prior_Functions.R")
+stan_model <- list("R/Melanoma/STAN/Logit_Sim_Norm_PP.stan")
+
 # Hyperparameters
 
 alpha_0 <- 1
@@ -212,6 +177,7 @@ beta_0 <- 1
 
 # Stan lists
 
+# CBF Prior
 opt_bf_model_list <- list(
                           N0 = N_0,
                           P = ncol(X_0),
@@ -222,7 +188,7 @@ opt_bf_model_list <- list(
                           y = Cens,
                           eta = 0.5,
                           nu = 6)
-
+# Uniform Prior
 unif_model_list <- list(
                         N0 = N_0,
                         P = ncol(X_0),
@@ -233,7 +199,7 @@ unif_model_list <- list(
                         y = Cens,
                         eta = 1,
                         nu = 1) 
-
+# KL Prior
 KL_model_list <- list(
   N0 = N_0,
   P = ncol(X_0),
@@ -245,6 +211,7 @@ KL_model_list <- list(
   eta = 0.7,
   nu = 1.5) 
 
+# MSE Prior
 MSE_model_list <- list(
   N0 = N_0,
   P = ncol(X_0),
@@ -256,6 +223,7 @@ MSE_model_list <- list(
   eta = 5.5,
   nu = 3) 
 
+# Jeffreys Prior
 jeffreys_model_list <- list(
   N0 = N_0,
   P = ncol(X_0),
@@ -266,6 +234,7 @@ jeffreys_model_list <- list(
   y = Cens,
   eta = 0.5,
   nu = 0.5) 
+
 #   ____________________________________________________________________________
 #   Running models                                                          ####
 
@@ -277,11 +246,11 @@ Ks <- c(10000)
 
 J <- 20
 
-### GAM Approximation ###
-constant_data <- read.csv("1.Main_Work_With_Ioannis/Uniform_Reference/Samples_From_Alternative/Melanoma/Data/delta_estimates_logit.csv")
+### GAM Approximation
+constant_data <- read.csv("Data/delta_estimates_logit.csv")
 fit_gam <- mgcv::gam(lc_a0 ~ s(a0, k = J + 1), data = constant_data)
 
-###
+### Normalizing Power Prior
 
 model_opt_bf <- norm_post_pp(Ks, 
                            list(opt_bf_model_list), 
@@ -298,16 +267,20 @@ model_MSE <- norm_post_pp(Ks,
 model_jeffreys <- norm_post_pp(Ks,
                          list(jeffreys_model_list),
                          stan_model)
-
-library("bayesplot")
-posterior_opt_bf <- as.array(model_opt_bf[[1]])
-posterior_unif <- as.array(model_unif[[1]])
+ 
+# Posterior Parameters
 model_opt_bf_par <- rstan::extract(model_opt_bf[[1]])
 model_unif_par <- rstan::extract(model_unif[[1]])
 model_KL_par <- rstan::extract(model_KL[[1]])
 model_MSE_par <- rstan::extract(model_MSE[[1]])
 model_jeffreys_par <- rstan::extract(model_jeffreys[[1]])
 
+
+#   ____________________________________________________________________________
+#   Latex Table                                                             ####
+
+
+# Dataframe Posterior Parameters
 data_parameter_post <- data.frame(log_age_beta_opt = model_opt_bf_par$beta[,1],
                                   log_age_beta_unif = model_unif_par$beta[,1],
                                   log_age_beta_KL = model_KL_par$beta[,1],
@@ -329,8 +302,6 @@ data_parameter_post <- data.frame(log_age_beta_opt = model_opt_bf_par$beta[,1],
                                   delta_MSE = model_MSE_par$delta,
                                   delta_opt_jeffreys = model_jeffreys_par$delta) 
 
-
-
 # HPDI 
 hpdi_age_opt <- rethinking::HPDI( data_parameter_post$log_age_beta_opt, prob = 0.95)
 hpdi_age_unif <- rethinking::HPDI( data_parameter_post$log_age_beta_unif, prob = 0.95)
@@ -349,10 +320,7 @@ hpdi_treat_MSE <- rethinking::HPDI( data_parameter_post$treatment_beta_MSE, prob
 hpdi_treat_jeffreys <- rethinking::HPDI( data_parameter_post$treatment_beta_jeffreys, prob = 0.95)
 
 
-
-
-
-
+# Dataframe for Latex Table
 data_parameter_post_tab <- data.frame(
   prior = c("Beta(0.5,6)", "Beta(1,1)", "Beta(0.7,1.5)", "Beta(5.5,3)", "Beta(0.5,0.5)"),
   mean_age = format(round(c(mean(data_parameter_post$log_age_beta_opt),
@@ -403,9 +371,7 @@ data_parameter_post_tab <- data.frame(
                 paste("(", round(hpdi_treat_jeffreys[1],2), ",", round(hpdi_treat_jeffreys[2],2), ")"))
 )
 
-
-
-## Create LaTeX table for omega
+# Create LaTeX Table
 dfTab_beta <- data_parameter_post_tab
 
 xtab_beta <- xtable(dfTab_beta)
@@ -422,7 +388,7 @@ colnames(xtab_beta) <- c("",
 
 align(xtab_beta) <- rep("c", length(colnames(xtab_beta)) + 1)
 
-## add multicolumns for effet size test and power parameter test
+## Add Multicolumns
 addtorow <- list()
 addtorow$pos <- list(-1)
 addtorow$command <- '\\toprule & & & \\multicolumn{2}{c}{Tests about the effect size $\\theta$} & \\multicolumn{2}{c}{Tests about the power parameter $\\alpha$} \\\\ \\cmidrule(lr){4-5} \\cmidrule(lr){6-7}'
@@ -430,12 +396,11 @@ print(xtab_beta, floating = FALSE, include.rownames = FALSE, add.to.row = addtor
       sanitize.text.function = function(x){x}, booktabs = TRUE, hline.after = c(0, nrow(xtab_beta)))
 
 
+#   ____________________________________________________________________________
+#   Plots                                                                   ####
 
 
-
-
-
-# Age plot
+# Log-Age Plots
 long_data_age <- gather(data_parameter_post, key = "variable", value = "value", 
                         log_age_beta_opt, log_age_beta_unif)
 
@@ -462,14 +427,12 @@ plot_age <- ggplot(long_data_age, aes(x = value, fill = variable)) +
         axis.text.y = element_text(size = 16),
         axis.text.x = element_text(size = 16))
 
-
-# Print the plot
+# Print the Plot
 print(plot_age)
 
 
 
-
-# Sex plot
+# Sex Plots
 long_data_sex <- gather(data_parameter_post, key = "variable", value = "value", 
                         sex_beta_opt, sex_beta_unif)
 
@@ -496,10 +459,11 @@ plot_sex <- ggplot(long_data_sex, aes(x = value, fill = variable)) +
         axis.text.y = element_text(size = 16),
         axis.text.x = element_text(size = 16))
 
-# Print the plot
+# Print the Plot
 print(plot_sex)
 
-# treatment plot
+
+# Treatment Plots
 long_data_treat <- gather(data_parameter_post, key = "variable", value = "value", 
                         treatment_beta_opt, treatment_beta_unif)
 
@@ -529,12 +493,14 @@ plot_treat <- ggplot(long_data_treat, aes(x = value, fill = variable)) +
 # Print the plot
 print(plot_treat)
 
-library(ggpubr)
 plot_comb <- ggarrange(plot_age, plot_sex, plot_treat, ncol = 3, nrow = 1, common.legend = TRUE, legend = "bottom")
 print(plot_comb)
 
-ggsave(filename = "post_param_melanoma.pdf",path = "1.Main_Work_With_Ioannis/Uniform_Reference/Plots", plot = plot_comb,
+ggsave(filename = "post_param_melanoma.pdf",path = "Plots", plot = plot_comb,
        width = 15, height = 8, device='pdf', dpi=500, useDingbats = FALSE)
+
+
+
 
 
 # Delta plot
