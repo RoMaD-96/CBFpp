@@ -67,6 +67,8 @@ historical_data_norm_pp <- list(
   P = ncol(X_0),
   y0 = Cens_0,
   X0 = X_0,
+  sex_0 = historical_data$sex,
+  treat_0 = historical_data$trt,
   delta = 0.05
 )
 

@@ -13,6 +13,7 @@ packages <- c(
   "ggridges",
   "tidyverse",
   "tidyr",
+  "kable",
   "tibble"
 )
 
@@ -26,14 +27,11 @@ if (any(installed_packages == FALSE)) {
 invisible(lapply(packages, library, character.only = TRUE))
 
 
-source("R/CBF_Functions.R")
-
-
 load("R/Melanoma/RData/Logit_VM.RData")
 rm(list = setdiff(ls(), c("df_obs_bf","grid")))
 
 
-
+source("R/CBF_Functions.R")
 #   ____________________________________________________________________________
 #   Optimal Model                                                           ####
 
@@ -182,55 +180,67 @@ opt_bf_model_list <- list(
                           N0 = N_0,
                           P = ncol(X_0),
                           X0 = X_0,
+                          sex_0 = historical_data$sex,
+                          treat_0 = historical_data$trt,
                           y0 = Cens_0,
                           N = N,
                           X = X,
+                          sex = current_data$sex,
+                          treat = current_data$trt,
                           y = Cens,
                           eta = 0.5,
                           nu = 6)
 # Uniform Prior
 unif_model_list <- list(
-                        N0 = N_0,
-                        P = ncol(X_0),
-                        X0 = X_0,
-                        y0 = Cens_0,
-                        N = N,
-                        X = X,
-                        y = Cens,
+                         N0 = N_0,
+                         P = ncol(X_0),
+                         X0 = X_0,
+                         sex_0 = historical_data$sex,
+                         treat_0 = historical_data$trt,
+                         y0 = Cens_0,
+                         N = N,
+                         X = X,
+                         sex = current_data$sex,
+                         treat = current_data$trt,
+                         y = Cens,
                         eta = 1,
                         nu = 1) 
-# KL Prior
-KL_model_list <- list(
-  N0 = N_0,
-  P = ncol(X_0),
-  X0 = X_0,
-  y0 = Cens_0,
-  N = N,
-  X = X,
-  y = Cens,
-  eta = 0.7,
-  nu = 1.5) 
-
-# MSE Prior
-MSE_model_list <- list(
-  N0 = N_0,
-  P = ncol(X_0),
-  X0 = X_0,
-  y0 = Cens_0,
-  N = N,
-  X = X,
-  y = Cens,
-  eta = 5.5,
-  nu = 3) 
+# # KL Prior
+# KL_model_list <- list(
+#   N0 = N_0,
+#   P = ncol(X_0),
+#   X0 = X_0,
+#   y0 = Cens_0,
+#   N = N,
+#   X = X,
+#   y = Cens,
+#   eta = 0.7,
+#   nu = 1.5) 
+# 
+# # MSE Prior
+# MSE_model_list <- list(
+#   N0 = N_0,
+#   P = ncol(X_0),
+#   X0 = X_0,
+#   y0 = Cens_0,
+#   N = N,
+#   X = X,
+#   y = Cens,
+#   eta = 5.5,
+#   nu = 3) 
 
 # Jeffreys Prior
 jeffreys_model_list <- list(
   N0 = N_0,
   P = ncol(X_0),
   X0 = X_0,
+  sex_0 = historical_data$sex,
+  treat_0 = historical_data$trt,
   y0 = Cens_0,
   N = N,
   X = X,
+  sex = current_data$sex,
+  treat = current_data$trt,
   y = Cens,
   eta = 0.5,
   nu = 0.5) 
@@ -258,12 +268,12 @@ model_opt_bf <- norm_post_pp(Ks,
 model_unif <- norm_post_pp(Ks,
                            list(unif_model_list),
                            stan_model)
-model_KL <- norm_post_pp(Ks,
-                           list(KL_model_list),
-                           stan_model)
-model_MSE <- norm_post_pp(Ks,
-                         list(MSE_model_list),
-                         stan_model)
+# model_KL <- norm_post_pp(Ks,
+#                            list(KL_model_list),
+#                            stan_model)
+# model_MSE <- norm_post_pp(Ks,
+#                          list(MSE_model_list),
+#                          stan_model)
 model_jeffreys <- norm_post_pp(Ks,
                          list(jeffreys_model_list),
                          stan_model)
@@ -271,8 +281,8 @@ model_jeffreys <- norm_post_pp(Ks,
 # Posterior Parameters
 model_opt_bf_par <- rstan::extract(model_opt_bf[[1]])
 model_unif_par <- rstan::extract(model_unif[[1]])
-model_KL_par <- rstan::extract(model_KL[[1]])
-model_MSE_par <- rstan::extract(model_MSE[[1]])
+# model_KL_par <- rstan::extract(model_KL[[1]])
+# model_MSE_par <- rstan::extract(model_MSE[[1]])
 model_jeffreys_par <- rstan::extract(model_jeffreys[[1]])
 
 
@@ -283,92 +293,113 @@ model_jeffreys_par <- rstan::extract(model_jeffreys[[1]])
 # Dataframe Posterior Parameters
 data_parameter_post <- data.frame(log_age_beta_opt = model_opt_bf_par$beta[,1],
                                   log_age_beta_unif = model_unif_par$beta[,1],
-                                  log_age_beta_KL = model_KL_par$beta[,1],
-                                  log_age_beta_MSE = model_MSE_par$beta[,1],
+                                  #log_age_beta_KL = model_KL_par$beta[,1],
+                                  #log_age_beta_MSE = model_MSE_par$beta[,1],
                                   log_age_beta_jeffreys = model_jeffreys_par$beta[,1],
                                   sex_beta_opt = model_opt_bf_par$beta[,2],
                                   sex_beta_unif = model_unif_par$beta[,2],
-                                  sex_beta_KL = model_KL_par$beta[,2],
-                                  sex_beta_MSE = model_MSE_par$beta[,2],
+                                  #sex_beta_KL = model_KL_par$beta[,2],
+                                  #sex_beta_MSE = model_MSE_par$beta[,2],
                                   sex_beta_jeffreys = model_jeffreys_par$beta[,2],
                                   treatment_beta_opt = model_opt_bf_par$beta[,3],
                                   treatment_beta_unif = model_unif_par$beta[,3],
-                                  treatment_beta_KL = model_KL_par$beta[,3],
-                                  treatment_beta_MSE = model_MSE_par$beta[,3],
+                                  #treatment_beta_KL = model_KL_par$beta[,3],
+                                  #treatment_beta_MSE = model_MSE_par$beta[,3],
                                   treatment_beta_jeffreys = model_jeffreys_par$beta[,3],
+                                  inter_sex_treat_opt = model_opt_bf_par$beta_inter,
+                                  inter_sex_treat_unif = model_unif_par$beta_inter,
+                                  inter_sex_treat_jeffreys = model_jeffreys_par$beta_inter,
                                   delta_opt = model_opt_bf_par$delta,
                                   delta_unif = model_unif_par$delta,
-                                  delta_KL = model_KL_par$delta,
-                                  delta_MSE = model_MSE_par$delta,
+                                  #delta_KL = model_KL_par$delta,
+                                  #delta_MSE = model_MSE_par$delta,
                                   delta_opt_jeffreys = model_jeffreys_par$delta) 
 
 # HPDI 
 hpdi_age_opt <- rethinking::HPDI( data_parameter_post$log_age_beta_opt, prob = 0.95)
 hpdi_age_unif <- rethinking::HPDI( data_parameter_post$log_age_beta_unif, prob = 0.95)
-hpdi_age_KL <- rethinking::HPDI( data_parameter_post$log_age_beta_KL, prob = 0.95)
-hpdi_age_MSE <- rethinking::HPDI( data_parameter_post$log_age_beta_MSE, prob = 0.95)
+#hpdi_age_KL <- rethinking::HPDI( data_parameter_post$log_age_beta_KL, prob = 0.95)
+#hpdi_age_MSE <- rethinking::HPDI( data_parameter_post$log_age_beta_MSE, prob = 0.95)
 hpdi_age_jeffreys <- rethinking::HPDI( data_parameter_post$log_age_beta_jeffreys, prob = 0.95)
 hpdi_sex_opt <- rethinking::HPDI( data_parameter_post$sex_beta_opt, prob = 0.95)
 hpdi_sex_unif <- rethinking::HPDI( data_parameter_post$sex_beta_unif, prob = 0.95)
-hpdi_sex_KL <- rethinking::HPDI( data_parameter_post$sex_beta_KL, prob = 0.95)
-hpdi_sex_MSE <- rethinking::HPDI( data_parameter_post$sex_beta_MSE, prob = 0.95)
+#hpdi_sex_KL <- rethinking::HPDI( data_parameter_post$sex_beta_KL, prob = 0.95)
+#hpdi_sex_MSE <- rethinking::HPDI( data_parameter_post$sex_beta_MSE, prob = 0.95)
 hpdi_sex_jeffreys <- rethinking::HPDI( data_parameter_post$sex_beta_jeffreys, prob = 0.95)
 hpdi_treat_opt <- rethinking::HPDI( data_parameter_post$treatment_beta_opt, prob = 0.95)
 hpdi_treat_unif <- rethinking::HPDI( data_parameter_post$treatment_beta_unif, prob = 0.95)
-hpdi_treat_KL <- rethinking::HPDI( data_parameter_post$treatment_beta_KL, prob = 0.95)
-hpdi_treat_MSE <- rethinking::HPDI( data_parameter_post$treatment_beta_MSE, prob = 0.95)
+#hpdi_treat_KL <- rethinking::HPDI( data_parameter_post$treatment_beta_KL, prob = 0.95)
+#hpdi_treat_MSE <- rethinking::HPDI( data_parameter_post$treatment_beta_MSE, prob = 0.95)
 hpdi_treat_jeffreys <- rethinking::HPDI( data_parameter_post$treatment_beta_jeffreys, prob = 0.95)
+hpdi_inter_opt <- rethinking::HPDI( data_parameter_post$inter_sex_treat_opt, prob = 0.95)
+hpdi_inter_unif <- rethinking::HPDI( data_parameter_post$inter_sex_treat_unif, prob = 0.95)
+hpdi_inter_jeffreys <- rethinking::HPDI( data_parameter_post$inter_sex_treat_jeffreys, prob = 0.95)
+
 
 
 # Dataframe for Latex Table
 data_parameter_post_tab <- data.frame(
-  prior = c("Beta(0.5,6)", "Beta(1,1)", "Beta(0.7,1.5)", "Beta(5.5,3)", "Beta(0.5,0.5)"),
+  prior = c("Beta(0.5,6)", "Beta(1,1)", 
+            #"Beta(0.7,1.5)", "Beta(5.5,3)",
+            "Beta(0.5,0.5)"),
   mean_age = format(round(c(mean(data_parameter_post$log_age_beta_opt),
            mean(data_parameter_post$log_age_beta_unif),
-           mean(data_parameter_post$log_age_beta_KL),
-           mean(data_parameter_post$log_age_beta_MSE),
+           #mean(data_parameter_post$log_age_beta_KL),
+           #mean(data_parameter_post$log_age_beta_MSE),
            mean(data_parameter_post$log_age_beta_jeffreys)),2), nsmall = 2),
   mean_sex = format(round(c(mean(data_parameter_post$sex_beta_opt),
                mean(data_parameter_post$sex_beta_unif),
-               mean(data_parameter_post$sex_beta_KL),
-               mean(data_parameter_post$sex_beta_MSE),
+               #mean(data_parameter_post$sex_beta_KL),
+               #mean(data_parameter_post$sex_beta_MSE),
                mean(data_parameter_post$sex_beta_jeffreys)),2), nsmall = 2),
   mean_treat = format(round(c(mean(data_parameter_post$treatment_beta_opt),
                 mean(data_parameter_post$treatment_beta_unif),
-                mean(data_parameter_post$treatment_beta_KL),
-                mean(data_parameter_post$treatment_beta_MSE),
+                #mean(data_parameter_post$treatment_beta_KL),
+                #mean(data_parameter_post$treatment_beta_MSE),
                 mean(data_parameter_post$treatment_beta_jeffreys)
+                ),2), nsmall = 2),
+  mean_inter = format(round(c(mean(data_parameter_post$inter_sex_treat_opt),
+                              mean(data_parameter_post$inter_sex_treat_unif),
+                              mean(data_parameter_post$inter_sex_treat_jeffreys)
                 ),2), nsmall = 2),
   sd_age = format(round(c(sd(data_parameter_post$log_age_beta_opt),
          sd(data_parameter_post$log_age_beta_unif),
-         sd(data_parameter_post$log_age_beta_KL),
-         sd(data_parameter_post$log_age_beta_MSE),
+         #sd(data_parameter_post$log_age_beta_KL),
+         #sd(data_parameter_post$log_age_beta_MSE),
          sd(data_parameter_post$log_age_beta_jeffreys)),2), nsmall = 2),
   sd_sex = format(round(c(sd(data_parameter_post$sex_beta_opt),
              sd(data_parameter_post$sex_beta_unif),
-             sd(data_parameter_post$sex_beta_KL),
-             sd(data_parameter_post$sex_beta_MSE),
+             #sd(data_parameter_post$sex_beta_KL),
+             #sd(data_parameter_post$sex_beta_MSE),
              sd(data_parameter_post$sex_beta_jeffreys)),2), nsmall = 2),
   sd_treat = format(round(c(sd(data_parameter_post$treatment_beta_opt),
               sd(data_parameter_post$treatment_beta_unif),
-              sd(data_parameter_post$treatment_beta_KL),
-              sd(data_parameter_post$treatment_beta_MSE),
+              #sd(data_parameter_post$treatment_beta_KL),
+              #sd(data_parameter_post$treatment_beta_MSE),
               sd(data_parameter_post$treatment_beta_jeffreys)),2), nsmall = 2),
+  sd_inter = format(round(c(sd(data_parameter_post$inter_sex_treat_opt),
+                              sd(data_parameter_post$inter_sex_treat_unif),
+                              sd(data_parameter_post$inter_sex_treat_jeffreys)),2), nsmall = 2),
+  
   hpdi_age = c(paste("(", round(hpdi_age_opt[1],2), ",", round(hpdi_age_opt[2],2), ")"),
            paste("(", round(hpdi_age_unif[1],2), ",", round(hpdi_age_unif[2],2), ")"),
-           paste("(", round(hpdi_age_KL[1],2), ",", round(hpdi_age_KL[2],2), ")"),
-           paste("(", round(hpdi_age_MSE[1],2), ",", round(hpdi_age_MSE[2],2), ")"),
+          # paste("(", round(hpdi_age_KL[1],2), ",", round(hpdi_age_KL[2],2), ")"),
+          # paste("(", round(hpdi_age_MSE[1],2), ",", round(hpdi_age_MSE[2],2), ")"),
            paste("(", round(hpdi_age_jeffreys[1],2), ",", round(hpdi_age_jeffreys[2],2), ")")),
   hpdi_sex = c(paste("(", round(hpdi_sex_opt[1],2), ",", round(hpdi_sex_opt[2],2), ")"),
            paste("(", round(hpdi_sex_unif[1],2), ",", round(hpdi_sex_unif[2],2), ")"),
-           paste("(", round(hpdi_sex_KL[1],2), ",", round(hpdi_sex_KL[2],2), ")"),
-           paste("(", round(hpdi_sex_MSE[1],2), ",", round(hpdi_sex_MSE[2],2), ")"),
+          # paste("(", round(hpdi_sex_KL[1],2), ",", round(hpdi_sex_KL[2],2), ")"),
+          # paste("(", round(hpdi_sex_MSE[1],2), ",", round(hpdi_sex_MSE[2],2), ")"),
            paste("(", round(hpdi_sex_jeffreys[1],2), ",", round(hpdi_sex_jeffreys[2],2), ")")),
   hpdi_treat = c(paste("(", round(hpdi_treat_opt[1],2), ",", round(hpdi_treat_opt[2],2), ")"),
                 paste("(", round(hpdi_treat_unif[1],2), ",", round(hpdi_treat_unif[2],2), ")"),
-                paste("(", round(hpdi_treat_KL[1],2), ",", round(hpdi_treat_KL[2],2), ")"),
-                paste("(", round(hpdi_treat_MSE[1],2), ",", round(hpdi_treat_MSE[2],2), ")"),
-                paste("(", round(hpdi_treat_jeffreys[1],2), ",", round(hpdi_treat_jeffreys[2],2), ")"))
+               # paste("(", round(hpdi_treat_KL[1],2), ",", round(hpdi_treat_KL[2],2), ")"),
+               # paste("(", round(hpdi_treat_MSE[1],2), ",", round(hpdi_treat_MSE[2],2), ")"),
+                paste("(", round(hpdi_treat_jeffreys[1],2), ",", round(hpdi_treat_jeffreys[2],2), ")")),
+  
+  hpdi_inter = c(paste("(", round(hpdi_inter_opt[1],2), ",", round(hpdi_inter_opt[2],2), ")"),
+                 paste("(", round(hpdi_inter_unif[1],2), ",", round(hpdi_inter_unif[2],2), ")"),
+                 paste("(", round(hpdi_inter_jeffreys[1],2), ",", round(hpdi_inter_jeffreys[2],2), ")"))
 )
 
 # Create LaTeX Table
@@ -379,12 +410,15 @@ colnames(xtab_beta) <- c("",
                           "Age",
                           "Sex",
                           "Treat.",
+                          "Inter.",
                           "Age",
                           "Sex",
                           "Treat.",
+                          "Inter.",
                           "Age",
                           "Sex",
-                          "Treat.")
+                          "Treat.",
+                          "Inter.")
 
 align(xtab_beta) <- rep("c", length(colnames(xtab_beta)) + 1)
 
