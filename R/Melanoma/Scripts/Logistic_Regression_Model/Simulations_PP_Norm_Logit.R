@@ -30,8 +30,6 @@ invisible(lapply(packages, library, character.only = TRUE))
 
 source("R/CBF_Functions.R")
 
-
-
 #   ____________________________________________________________________________
 #   Grid Search                                                             ####
 
@@ -45,24 +43,16 @@ grid <- grid[-14,]
 combinations <- expand.grid(model_id,14)
 
 
+
 #   ____________________________________________________________________________
 #   Datasets                                                                ####
 
-data <- drop_na(read_excel("Data/trial_e1684_e1690_Merged.xlsx", 
-                           col_types = c("numeric", "numeric", "numeric", 
-                                         "numeric", "numeric", "numeric", 
-                                         "numeric", "numeric", "numeric", 
-                                         "numeric", "numeric", "numeric", 
-                                         "numeric")))
+library(hdbayes)
 
-historical_data <- filter(data, study == 1684)[,-2]
-current_data <- filter(data, study == 1690)[,-2]
-
-## Standardization ##
-
-log_age_hist <- log(historical_data$age)
-log_age_current <- log(current_data$age)
-
+data("E2696")
+data("E1694")
+historical_data <- E2696
+current_data <- E1694
 
 #   ____________________________________________________________________________
 #   Approximately Normalized Prior                                          ####
@@ -73,35 +63,32 @@ J <- 20
 ### GAM Approximation ###
 constant_data <- read.csv("Data/delta_estimates_logit.csv")
 fit_gam <- mgcv::gam(lc_a0 ~ s(a0, k = J + 1), data = constant_data)
-
+plot(fit_gam)
 #   ____________________________________________________________________________
 #   STAN Data Block Configuration                                           ####
 
 
-
-N_0 <- length(log_age_hist)
-X_0 <- cbind(log_age_hist, # x1 - log age 
-             historical_data$sex, # x2 - gender
-             historical_data$trt # x3 treatment
+N_0 <- nrow(historical_data)
+X0 <- cbind(historical_data$age, # x1 - age 
+             historical_data$treatment, # x2 - treatment
+             historical_data$sex, # x4 race
+             historical_data$perform # x4 cd4
 )
-Y_0_cens <- historical_data$survtime
-Cens_0 <- historical_data$scens
 
 
-N<- length(log_age_current)
-X <- cbind(rep(1, N), # x0 - dummy for intercept
-           log_age_current, # x1 - log age 
-           current_data$sex, # x2 - gender 
-           current_data$trt # x3 treatment
+N <- nrow(current_data)
+X <- cbind(current_data$age, # x1 - age 
+           current_data$treatment, # x2 - treatment
+           current_data$sex, # x4 race
+           current_data$perform # x4 cd4
 )
-Y_cens <- current_data$survtime
-Cens<- current_data$scens
+
 
 ##  ............................................................................
 ##  Parallel Processing                                                     ####
 
 
-stan_model <- list("R/Melanoma/STAN/Logit_Sim_Norm_PP.stan")
+stan_model <- list("STAN/Logit_Sim_Norm_PP.stan")
 
 # Hyperparameters
 
@@ -116,12 +103,12 @@ beta_0 <- 1
 random_data_obs_bf_num <- lapply(1:nrow(combinations), function(i) {
   list(
     N0 = N_0,
-    P = ncol(X_0),
-    X0 = X_0,
-    y0 = Cens_0,
+    P = ncol(X0),
+    X0 = as.matrix(X0),
+    y0 = historical_data$failind,
     N = N,
-    X = X,
-    y = Cens,
+    X = as.matrix(X),
+    y = current_data$failind,
     eta = grid$x[i],
     nu = grid$y[i]
   )
@@ -130,12 +117,12 @@ random_data_obs_bf_num <- lapply(1:nrow(combinations), function(i) {
 random_data_obs_bf_den <- lapply(1:nrow(combinations), function(i) {
   list(
     N0 = N_0,
-    P = ncol(X_0),
-    X0 = X_0,
-    y0 = Cens_0,
+    P = ncol(X0),
+    X0 = as.matrix(X0),
+    y0 = historical_data$failind,
     N = N,
-    X = X,
-    y = Cens,
+    X = as.matrix(X),
+    y = current_data$failind,
     eta = 1, 
     nu = 1    
   )
@@ -149,7 +136,7 @@ n_it_obs_bf <- nrow(combinations)
 cores <- detectCores()
 
 # Register the parallel backend
-plan(multicore, workers = 7)
+plan(multisession, workers = 12)
 
 # Run the loop in parallel
 opts <- list(packages = c("bridgesampling","rstan"),
@@ -199,6 +186,8 @@ df_obs_bf <- cbind(obs_bf,combinations)
 
 plan(sequential)
 
+save(df_obs_bf, file = "obs_bf_melanoma.RData")
+
 
 #   ____________________________________________________________________________
 #   Simulations                                                             ####
@@ -208,25 +197,28 @@ print("Generating Posterior Samples")
 ##  ............................................................................
 ##  Generating Quantities                                                   ####
 
-stan_model_gen <- list("R/Melanoma/STAN/Logit_Sim_Norm_PP_Gen.stan")
+df_obs_bf_pos <- filter(df_obs_bf, obs_bf>=0)
 
-random_data_obs_bf <- lapply(1:nrow(combinations), function(i) {
+stan_model_gen <- list("STAN/Logit_Sim_Norm_PP_Gen.stan")
+
+random_data_obs_bf <- lapply(1:nrow(df_obs_bf_pos), function(i) {
   list(
     N0 = N_0,
-    P = ncol(X_0),
-    X0 = X_0,
-    y0 = Cens_0,
+    P = ncol(X0),
+    X0 = as.matrix(X0),
+    y0 = historical_data$failind,
     N = N,
-    X = X,
-    y = Cens,
-    eta = grid$x[i],
-    nu = grid$y[i]
+    X = as.matrix(X),
+    y = current_data$failind,
+    eta = grid$x[grid$model_id==df_obs_bf_pos$Var1[i]],
+    nu = grid$y[grid$model_id==df_obs_bf_pos$Var1[i]]
   )
 })
 
 Ks <- c(10000)
 J <- 20
 
+options(mc.cores = 4)
 models_gen <- norm_post_pp(Ks,
                            random_data_obs_bf,
                            stan_model_gen)
@@ -239,13 +231,14 @@ models_gen_rep <- lapply(models_gen_par, function(model) model$y_rep[3000:4000,]
 
 rm(models_gen, models_gen_par)
 
+options(mc.cores = 1)
 
-
+save(models_gen_rep, file = "obs_rep.RData")
 
 ##  ............................................................................
 ##  BF Replications                                                         ####
 
-stan_model_rep <- list("R/Melanoma/STAN/Logit_Sim_Norm_PP_Rep.stan")
+stan_model_rep <- list("STAN/Logit_Sim_Norm_PP_Rep.stan")
 
 # Function for parallel computing
 code_block <- function(portion_rep, iteration) {
@@ -255,14 +248,14 @@ code_block <- function(portion_rep, iteration) {
   # Create lists
   bf_list <- list()
   # Define number of iterations
-  n_iterations <- nrow(combinations)
+  n_iterations <- nrow(df_obs_bf_pos)
   my_seq <- portion_rep[[iteration]]
   
   # Set up parallel backend with number of cores to use
   cores <- detectCores()
   
   # Register the parallel backend
-  plan(multicore, workers = 7)
+  plan(multisession, workers = 14)
   
   # Run the loop in parallel
   opts <- list(progress = progress,
@@ -280,25 +273,25 @@ code_block <- function(portion_rep, iteration) {
       random_data_num <- lapply(y_rep, function(y_val) {
         list(
           N0 = N_0,
-          P = ncol(X_0),
-          X0 = X_0,
-          y0 = Cens_0,
+          P = ncol(X0),
+          X0 = as.matrix(X0),
+          y0 = historical_data$failind,
           N = length(y_val),
-          X = X,
+          X = as.matrix(X),
           y_rep = as.array(y_val),
-          eta = grid$x[j],
-          nu = grid$y[j]
+          eta = grid$x[grid$model_id==df_obs_bf_pos$Var1[j]],
+          nu = grid$y[grid$model_id==df_obs_bf_pos$Var1[j]]
         )
       })
       
       random_data_den <- lapply(y_rep, function(y_val) {
         list(
           N0 = N_0,
-          P = ncol(X_0),
-          X0 = X_0,
-          y0 = Cens_0,
+          P = ncol(X0),
+          X0 = as.matrix(X0),
+          y0 = historical_data$failind,
           N = length(y_val),
-          X = X,
+          X = as.matrix(X),
           y_rep = as.array(y_val),
           eta = 1,
           nu = 1
@@ -311,7 +304,7 @@ code_block <- function(portion_rep, iteration) {
       J <- 20
       
       ### GAM Approximation 
-      constant_data <- read.csv("delta_estimates_logit.csv")
+      constant_data <- read.csv("Data/delta_estimates_logit.csv")
       fit_gam <- mgcv::gam(lc_a0 ~ s(a0, k = J + 1), data = constant_data)
       
       ### BF Replications

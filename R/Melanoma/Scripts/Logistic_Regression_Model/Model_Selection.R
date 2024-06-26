@@ -13,7 +13,7 @@ packages <- c(
   "ggridges",
   "tidyverse",
   "tidyr",
-  "kable",
+  "xtable",
   "tibble"
 )
 
@@ -25,10 +25,6 @@ if (any(installed_packages == FALSE)) {
 
 # Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
-
-
-load("R/Melanoma/RData/Logit_VM.RData")
-rm(list = setdiff(ls(), c("df_obs_bf","grid")))
 
 
 source("R/CBF_Functions.R")
@@ -65,7 +61,7 @@ data_structure <- function(path, n_files){
   original_list <- combined_list 
   
   # Number of models
-  num_models <- 143
+  num_models <- 64
   
   # Creare una nuova lista vuota per contenere gli elementi raggruppati
   grouped_list <- vector("list", num_models)
@@ -90,43 +86,35 @@ data_structure <- function(path, n_files){
   return(bf_data_rep)
 }
 
-path <- "R/Melanoma/RData/"
+path <- "R/Melanoma/RData/Melanoma_Data/"
 
 
-bf_data <- data_structure(path,48)
+bf_data <- data_structure(path,40)
 
 # Reshape the data into long format
 bf_data_long <- bf_data %>%
   mutate(row_id = row_number()) %>%
   pivot_longer(cols = -row_id, names_to = "Column", values_to = "Value")
 
+load("R/Melanoma/obs_bf_melanoma.RData")
+df_obs_bf <- filter(df_obs_bf, obs_bf>=0)
 
 
-optimal_model_index <- calculate_maximized_value(bf_data_long$Value, df_obs_bf$obs_bf, 0.95)
+optimal_model_index <- calculate_maximized_value(bf_data_long$Value, df_obs_bf$obs_bf, 0.75)
 
 
 
 #   ____________________________________________________________________________
 #   Datasets                                                                ####
 
-set.seed(478)
+set.seed(4231)
+set.seed(433)
 
-data <- read_excel("Data/trial_e1684_e1690_Merged.xlsx", 
-                   col_types = c("numeric", "numeric", "numeric", 
-                                 "numeric", "numeric", "numeric", 
-                                 "numeric", "numeric", "numeric", 
-                                 "numeric", "numeric", "numeric", 
-                                "numeric"))
-
-
-
-historical_data <- filter(data, study == 1684)[,-2]
-current_data <- filter(data, study == 1690)[,-2]
-
-## Standardization ##
-
-log_age_hist <- log(historical_data$age)
-log_age_current <- log(current_data$age)
+library(hdbayes)
+data("E2696")
+data("E1694")
+historical_data <- E2696
+current_data <- E1694
 
 
 #   ____________________________________________________________________________
@@ -138,31 +126,27 @@ J <- 20
 ### GAM Approximation ###
 constant_data <- read.csv("Data/delta_estimates_logit.csv")
 fit_gam <- mgcv::gam(lc_a0 ~ s(a0, k = J + 1), data = constant_data)
-
-# mgcv::plot.gam(fit_gam)
+plot(fit_gam)
+ #mgcv::plot.gam(fit_gam)
 
 #   ____________________________________________________________________________
 #   STAN Data Block Configuration                                           ####
 
 
-N_0 <- length(log_age_hist)
-X_0 <- cbind(log_age = log_age_hist, # x1 - log age 
-             sex = historical_data$sex, # x2 - gender 
-             treat_status = historical_data$trt # x3 treatment
+N_0 <- nrow(historical_data)
+X0 <- cbind(historical_data$age, # x1 - age 
+            historical_data$treatment, # x2 - treatment
+            historical_data$sex, # x4 race
+            historical_data$perform # x4 cd4
 )
-Y_0_cens <- historical_data$survtime
-Cens_0 <- historical_data$scens
 
 
-N<- length(log_age_current)
-X <- cbind(log_age_current, # x1 - log age 
-           current_data$sex, # x2 - gender
-           current_data$trt # x3 treatment
+N <- nrow(current_data)
+X <- cbind(current_data$age, # x1 - age 
+           current_data$treatment, # x2 - treatment
+           current_data$sex, # x4 race
+           current_data$perform # x4 cd4
 )
-Y_cens <- current_data$survtime
-Cens<- current_data$scens
-
-
 #   ____________________________________________________________________________
 #   Model Specification                                                     ####
 
@@ -177,73 +161,56 @@ beta_0 <- 1
 
 # CBF Prior
 opt_bf_model_list <- list(
-                          N0 = N_0,
-                          P = ncol(X_0),
-                          X0 = X_0,
-                          sex_0 = historical_data$sex,
-                          treat_0 = historical_data$trt,
-                          y0 = Cens_0,
-                          N = N,
-                          X = X,
-                          sex = current_data$sex,
-                          treat = current_data$trt,
-                          y = Cens,
-                          eta = 0.5,
-                          nu = 6)
+  N0 = N_0,
+  P = ncol(X0),
+  X0 = as.matrix(X0),
+  y0 = historical_data$failind,
+  N = N,
+  X = as.matrix(X),
+  y = current_data$failind,
+  eta = 5,
+  nu = 0.5
+)
 # Uniform Prior
 unif_model_list <- list(
-                         N0 = N_0,
-                         P = ncol(X_0),
-                         X0 = X_0,
-                         sex_0 = historical_data$sex,
-                         treat_0 = historical_data$trt,
-                         y0 = Cens_0,
-                         N = N,
-                         X = X,
-                         sex = current_data$sex,
-                         treat = current_data$trt,
-                         y = Cens,
-                        eta = 1,
-                        nu = 1) 
-# # KL Prior
-# KL_model_list <- list(
-#   N0 = N_0,
-#   P = ncol(X_0),
-#   X0 = X_0,
-#   y0 = Cens_0,
-#   N = N,
-#   X = X,
-#   y = Cens,
-#   eta = 0.7,
-#   nu = 1.5) 
-# 
-# # MSE Prior
-# MSE_model_list <- list(
-#   N0 = N_0,
-#   P = ncol(X_0),
-#   X0 = X_0,
-#   y0 = Cens_0,
-#   N = N,
-#   X = X,
-#   y = Cens,
-#   eta = 5.5,
-#   nu = 3) 
+  N0 = N_0,
+  P = ncol(X0),
+  X0 = as.matrix(X0),
+  y0 = historical_data$failind,
+  N = N,
+  X = as.matrix(X),
+  y = current_data$failind,
+  eta = 1,
+  nu = 1
+)
 
 # Jeffreys Prior
 jeffreys_model_list <- list(
   N0 = N_0,
-  P = ncol(X_0),
-  X0 = X_0,
-  sex_0 = historical_data$sex,
-  treat_0 = historical_data$trt,
-  y0 = Cens_0,
+  P = ncol(X0),
+  X0 = as.matrix(X0),
+  y0 = historical_data$failind,
   N = N,
-  X = X,
-  sex = current_data$sex,
-  treat = current_data$trt,
-  y = Cens,
+  X = as.matrix(X),
+  y = current_data$failind,
   eta = 0.5,
   nu = 0.5) 
+
+# Beta(2,2)
+
+beta_2_model_list <- list(
+  N0 = N_0,
+  P = ncol(X0),
+  X0 = as.matrix(X0),
+  y0 = historical_data$failind,
+  N = N,
+  X = as.matrix(X),
+  y = current_data$failind,
+  eta = 2,
+  nu = 2) 
+
+
+
 
 #   ____________________________________________________________________________
 #   Running models                                                          ####
@@ -268,157 +235,144 @@ model_opt_bf <- norm_post_pp(Ks,
 model_unif <- norm_post_pp(Ks,
                            list(unif_model_list),
                            stan_model)
-# model_KL <- norm_post_pp(Ks,
-#                            list(KL_model_list),
-#                            stan_model)
-# model_MSE <- norm_post_pp(Ks,
-#                          list(MSE_model_list),
-#                          stan_model)
+
 model_jeffreys <- norm_post_pp(Ks,
                          list(jeffreys_model_list),
                          stan_model)
- 
+
+model_beta_2 <- norm_post_pp(Ks,
+                               list(beta_2_model_list),
+                               stan_model) 
 # Posterior Parameters
 model_opt_bf_par <- rstan::extract(model_opt_bf[[1]])
 model_unif_par <- rstan::extract(model_unif[[1]])
-# model_KL_par <- rstan::extract(model_KL[[1]])
-# model_MSE_par <- rstan::extract(model_MSE[[1]])
 model_jeffreys_par <- rstan::extract(model_jeffreys[[1]])
-
+model_beta_2_par <- rstan::extract(model_beta_2[[1]])
 
 #   ____________________________________________________________________________
 #   Latex Table                                                             ####
 
-
 # Dataframe Posterior Parameters
-data_parameter_post <- data.frame(log_age_beta_opt = model_opt_bf_par$beta[,1],
-                                  log_age_beta_unif = model_unif_par$beta[,1],
-                                  #log_age_beta_KL = model_KL_par$beta[,1],
-                                  #log_age_beta_MSE = model_MSE_par$beta[,1],
-                                  log_age_beta_jeffreys = model_jeffreys_par$beta[,1],
-                                  sex_beta_opt = model_opt_bf_par$beta[,2],
-                                  sex_beta_unif = model_unif_par$beta[,2],
-                                  #sex_beta_KL = model_KL_par$beta[,2],
-                                  #sex_beta_MSE = model_MSE_par$beta[,2],
-                                  sex_beta_jeffreys = model_jeffreys_par$beta[,2],
-                                  treatment_beta_opt = model_opt_bf_par$beta[,3],
-                                  treatment_beta_unif = model_unif_par$beta[,3],
-                                  #treatment_beta_KL = model_KL_par$beta[,3],
-                                  #treatment_beta_MSE = model_MSE_par$beta[,3],
-                                  treatment_beta_jeffreys = model_jeffreys_par$beta[,3],
-                                  inter_sex_treat_opt = model_opt_bf_par$beta_inter,
-                                  inter_sex_treat_unif = model_unif_par$beta_inter,
-                                  inter_sex_treat_jeffreys = model_jeffreys_par$beta_inter,
+data_parameter_post <- data.frame(age_beta_opt = model_opt_bf_par$beta[,1],
+                                  age_beta_unif = model_unif_par$beta[,1],
+                                  age_beta_jeffreys = model_jeffreys_par$beta[,1],
+                                  age_beta_2 = model_beta_2_par$beta[,1],
+                                  treat_beta_opt = model_opt_bf_par$beta[,2],
+                                  treat_beta_unif = model_unif_par$beta[,2],
+                                  treat_beta_jeffreys = model_jeffreys_par$beta[,2],
+                                  treat_beta_2 = model_beta_2_par$beta[,2],
+                                  sex_beta_opt = model_opt_bf_par$beta[,3],
+                                  sex_beta_unif = model_unif_par$beta[,3],
+                                  sex_beta_jeffreys = model_jeffreys_par$beta[,3],
+                                  sex_beta_2 = model_beta_2_par$beta[,3],
+                                  perform_beta_opt = model_opt_bf_par$beta[,4],
+                                  perform_beta_unif = model_unif_par$beta[,4],
+                                  perform_beta_jeffreys = model_jeffreys_par$beta[,4],
+                                  perform_beta_2 = model_beta_2_par$beta[,4],
                                   delta_opt = model_opt_bf_par$delta,
                                   delta_unif = model_unif_par$delta,
-                                  #delta_KL = model_KL_par$delta,
-                                  #delta_MSE = model_MSE_par$delta,
-                                  delta_opt_jeffreys = model_jeffreys_par$delta) 
+                                  delta_opt_jeffreys = model_jeffreys_par$delta, 
+                                  delta_beta_2 = model_beta_2_par$delta) 
 
 # HPDI 
-hpdi_age_opt <- rethinking::HPDI( data_parameter_post$log_age_beta_opt, prob = 0.95)
-hpdi_age_unif <- rethinking::HPDI( data_parameter_post$log_age_beta_unif, prob = 0.95)
-#hpdi_age_KL <- rethinking::HPDI( data_parameter_post$log_age_beta_KL, prob = 0.95)
-#hpdi_age_MSE <- rethinking::HPDI( data_parameter_post$log_age_beta_MSE, prob = 0.95)
-hpdi_age_jeffreys <- rethinking::HPDI( data_parameter_post$log_age_beta_jeffreys, prob = 0.95)
+hpdi_age_opt <- rethinking::HPDI( data_parameter_post$age_beta_opt, prob = 0.95)
+hpdi_age_unif <- rethinking::HPDI( data_parameter_post$age_beta_unif, prob = 0.95)
+hpdi_age_jeffreys <- rethinking::HPDI( data_parameter_post$age_beta_jeffreys, prob = 0.95)
+hpdi_age_beta_2 <- rethinking::HPDI( data_parameter_post$age_beta_2, prob = 0.95)
+hpdi_treat_opt <- rethinking::HPDI( data_parameter_post$treat_beta_opt, prob = 0.95)
+hpdi_treat_unif <- rethinking::HPDI( data_parameter_post$treat_beta_unif, prob = 0.95)
+hpdi_treat_jeffreys <- rethinking::HPDI( data_parameter_post$treat_beta_jeffreys, prob = 0.95)
+hpdi_treat_beta_2 <- rethinking::HPDI( data_parameter_post$treat_beta_2, prob = 0.95)
 hpdi_sex_opt <- rethinking::HPDI( data_parameter_post$sex_beta_opt, prob = 0.95)
 hpdi_sex_unif <- rethinking::HPDI( data_parameter_post$sex_beta_unif, prob = 0.95)
-#hpdi_sex_KL <- rethinking::HPDI( data_parameter_post$sex_beta_KL, prob = 0.95)
-#hpdi_sex_MSE <- rethinking::HPDI( data_parameter_post$sex_beta_MSE, prob = 0.95)
 hpdi_sex_jeffreys <- rethinking::HPDI( data_parameter_post$sex_beta_jeffreys, prob = 0.95)
-hpdi_treat_opt <- rethinking::HPDI( data_parameter_post$treatment_beta_opt, prob = 0.95)
-hpdi_treat_unif <- rethinking::HPDI( data_parameter_post$treatment_beta_unif, prob = 0.95)
-#hpdi_treat_KL <- rethinking::HPDI( data_parameter_post$treatment_beta_KL, prob = 0.95)
-#hpdi_treat_MSE <- rethinking::HPDI( data_parameter_post$treatment_beta_MSE, prob = 0.95)
-hpdi_treat_jeffreys <- rethinking::HPDI( data_parameter_post$treatment_beta_jeffreys, prob = 0.95)
-hpdi_inter_opt <- rethinking::HPDI( data_parameter_post$inter_sex_treat_opt, prob = 0.95)
-hpdi_inter_unif <- rethinking::HPDI( data_parameter_post$inter_sex_treat_unif, prob = 0.95)
-hpdi_inter_jeffreys <- rethinking::HPDI( data_parameter_post$inter_sex_treat_jeffreys, prob = 0.95)
+hpdi_sex_beta_2 <- rethinking::HPDI( data_parameter_post$sex_beta_2, prob = 0.95)
+hpdi_perform_opt <- rethinking::HPDI( data_parameter_post$perform_beta_opt, prob = 0.95)
+hpdi_perform_unif <- rethinking::HPDI( data_parameter_post$perform_beta_unif, prob = 0.95)
+hpdi_perform_jeffreys <- rethinking::HPDI( data_parameter_post$perform_beta_jeffreys, prob = 0.95)
+hpdi_perform_beta_2 <- rethinking::HPDI( data_parameter_post$perform_beta_2, prob = 0.95)
+
+
 
 
 
 # Dataframe for Latex Table
 data_parameter_post_tab <- data.frame(
-  prior = c("Beta(0.5,6)", "Beta(1,1)", 
+  prior = c("Beta(0.5,5)", "Beta(1,1)", 
             #"Beta(0.7,1.5)", "Beta(5.5,3)",
-            "Beta(0.5,0.5)"),
-  mean_age = format(round(c(mean(data_parameter_post$log_age_beta_opt),
-           mean(data_parameter_post$log_age_beta_unif),
-           #mean(data_parameter_post$log_age_beta_KL),
-           #mean(data_parameter_post$log_age_beta_MSE),
-           mean(data_parameter_post$log_age_beta_jeffreys)),2), nsmall = 2),
+            "Beta(0.5,0.5)", "Beta(2,2)"),
+  mean_age = format(round(c(mean(data_parameter_post$age_beta_opt),
+           mean(data_parameter_post$age_beta_unif),
+           mean(data_parameter_post$age_beta_jeffreys),
+           mean(data_parameter_post$age_beta_2)),3), nsmall = 3),
+  mean_treat = format(round(c(mean(data_parameter_post$treat_beta_opt),
+               mean(data_parameter_post$treat_beta_unif),
+               mean(data_parameter_post$treat_beta_jeffreys),
+               mean(data_parameter_post$treat_beta_2)),3), nsmall = 3),
   mean_sex = format(round(c(mean(data_parameter_post$sex_beta_opt),
-               mean(data_parameter_post$sex_beta_unif),
-               #mean(data_parameter_post$sex_beta_KL),
-               #mean(data_parameter_post$sex_beta_MSE),
-               mean(data_parameter_post$sex_beta_jeffreys)),2), nsmall = 2),
-  mean_treat = format(round(c(mean(data_parameter_post$treatment_beta_opt),
-                mean(data_parameter_post$treatment_beta_unif),
-                #mean(data_parameter_post$treatment_beta_KL),
-                #mean(data_parameter_post$treatment_beta_MSE),
-                mean(data_parameter_post$treatment_beta_jeffreys)
-                ),2), nsmall = 2),
-  mean_inter = format(round(c(mean(data_parameter_post$inter_sex_treat_opt),
-                              mean(data_parameter_post$inter_sex_treat_unif),
-                              mean(data_parameter_post$inter_sex_treat_jeffreys)
-                ),2), nsmall = 2),
-  sd_age = format(round(c(sd(data_parameter_post$log_age_beta_opt),
-         sd(data_parameter_post$log_age_beta_unif),
-         #sd(data_parameter_post$log_age_beta_KL),
-         #sd(data_parameter_post$log_age_beta_MSE),
-         sd(data_parameter_post$log_age_beta_jeffreys)),2), nsmall = 2),
+                mean(data_parameter_post$sex_beta_unif),
+                mean(data_parameter_post$sex_beta_jeffreys),
+                mean(data_parameter_post$sex_beta_2)
+                ),3), nsmall = 3),
+  mean_perform = format(round(c(mean(data_parameter_post$perform_beta_opt),
+                            mean(data_parameter_post$perform_beta_unif),
+                            mean(data_parameter_post$perform_beta_jeffreys),
+                            mean(data_parameter_post$perform_beta_2)
+  ),3), nsmall = 3),
+  sd_age = format(round(c(sd(data_parameter_post$age_beta_opt),
+         sd(data_parameter_post$age_beta_unif),
+         sd(data_parameter_post$age_beta_jeffreys),
+         sd(data_parameter_post$age_beta_2)),3), nsmall = 3),
+  sd_treat = format(round(c(sd(data_parameter_post$treat_beta_opt),
+             sd(data_parameter_post$treat_beta_unif),
+             sd(data_parameter_post$treat_beta_jeffreys),
+             sd(data_parameter_post$treat_beta_2)),3), nsmall = 3),
   sd_sex = format(round(c(sd(data_parameter_post$sex_beta_opt),
-             sd(data_parameter_post$sex_beta_unif),
-             #sd(data_parameter_post$sex_beta_KL),
-             #sd(data_parameter_post$sex_beta_MSE),
-             sd(data_parameter_post$sex_beta_jeffreys)),2), nsmall = 2),
-  sd_treat = format(round(c(sd(data_parameter_post$treatment_beta_opt),
-              sd(data_parameter_post$treatment_beta_unif),
-              #sd(data_parameter_post$treatment_beta_KL),
-              #sd(data_parameter_post$treatment_beta_MSE),
-              sd(data_parameter_post$treatment_beta_jeffreys)),2), nsmall = 2),
-  sd_inter = format(round(c(sd(data_parameter_post$inter_sex_treat_opt),
-                              sd(data_parameter_post$inter_sex_treat_unif),
-                              sd(data_parameter_post$inter_sex_treat_jeffreys)),2), nsmall = 2),
+              sd(data_parameter_post$sex_beta_unif),
+              sd(data_parameter_post$sex_beta_jeffreys),
+              sd(data_parameter_post$sex_beta_2)),3), nsmall = 3),
+  sd_perform = format(round(c(sd(data_parameter_post$perform_beta_opt),
+                          sd(data_parameter_post$perform_beta_unif),
+                          sd(data_parameter_post$perform_beta_jeffreys),
+                          sd(data_parameter_post$perform_beta_2)),3), nsmall = 3),
   
-  hpdi_age = c(paste("(", round(hpdi_age_opt[1],2), ",", round(hpdi_age_opt[2],2), ")"),
-           paste("(", round(hpdi_age_unif[1],2), ",", round(hpdi_age_unif[2],2), ")"),
-          # paste("(", round(hpdi_age_KL[1],2), ",", round(hpdi_age_KL[2],2), ")"),
-          # paste("(", round(hpdi_age_MSE[1],2), ",", round(hpdi_age_MSE[2],2), ")"),
-           paste("(", round(hpdi_age_jeffreys[1],2), ",", round(hpdi_age_jeffreys[2],2), ")")),
-  hpdi_sex = c(paste("(", round(hpdi_sex_opt[1],2), ",", round(hpdi_sex_opt[2],2), ")"),
-           paste("(", round(hpdi_sex_unif[1],2), ",", round(hpdi_sex_unif[2],2), ")"),
-          # paste("(", round(hpdi_sex_KL[1],2), ",", round(hpdi_sex_KL[2],2), ")"),
-          # paste("(", round(hpdi_sex_MSE[1],2), ",", round(hpdi_sex_MSE[2],2), ")"),
-           paste("(", round(hpdi_sex_jeffreys[1],2), ",", round(hpdi_sex_jeffreys[2],2), ")")),
-  hpdi_treat = c(paste("(", round(hpdi_treat_opt[1],2), ",", round(hpdi_treat_opt[2],2), ")"),
-                paste("(", round(hpdi_treat_unif[1],2), ",", round(hpdi_treat_unif[2],2), ")"),
-               # paste("(", round(hpdi_treat_KL[1],2), ",", round(hpdi_treat_KL[2],2), ")"),
-               # paste("(", round(hpdi_treat_MSE[1],2), ",", round(hpdi_treat_MSE[2],2), ")"),
-                paste("(", round(hpdi_treat_jeffreys[1],2), ",", round(hpdi_treat_jeffreys[2],2), ")")),
-  
-  hpdi_inter = c(paste("(", round(hpdi_inter_opt[1],2), ",", round(hpdi_inter_opt[2],2), ")"),
-                 paste("(", round(hpdi_inter_unif[1],2), ",", round(hpdi_inter_unif[2],2), ")"),
-                 paste("(", round(hpdi_inter_jeffreys[1],2), ",", round(hpdi_inter_jeffreys[2],2), ")"))
+  hpdi_age = c(paste("(", round(hpdi_age_opt[1],3), ",", round(hpdi_age_opt[2],3), ")"),
+           paste("(", round(hpdi_age_unif[1],3), ",", round(hpdi_age_unif[2],3), ")"),
+           paste("(", round(hpdi_age_jeffreys[1],3), ",", round(hpdi_age_jeffreys[2],3), ")"),
+           paste("(", round(hpdi_age_beta_2[1],3), ",", round(hpdi_age_beta_2[2],3), ")")),
+  hpdi_treat = c(paste("(", round(hpdi_treat_opt[1],3), ",", round(hpdi_treat_opt[2],3), ")"),
+           paste("(", round(hpdi_treat_unif[1],3), ",", round(hpdi_treat_unif[2],3), ")"),
+           paste("(", round(hpdi_treat_jeffreys[1],3), ",", round(hpdi_treat_jeffreys[2],3), ")"),
+           paste("(", round(hpdi_treat_beta_2[1],3), ",", round(hpdi_treat_beta_2[2],3), ")")),
+  hpdi_sex = c(paste("(", round(hpdi_sex_opt[1],3), ",", round(hpdi_sex_opt[2],3), ")"),
+                paste("(", round(hpdi_sex_unif[1],3), ",", round(hpdi_sex_unif[2],3), ")"),
+                paste("(", round(hpdi_sex_jeffreys[1],3), ",", round(hpdi_sex_jeffreys[2],3), ")"),
+               paste("(", round(hpdi_sex_beta_2[1],3), ",", round(hpdi_sex_beta_2[2],3), ")")),
+  hpdi_perform = c(paste("(", round(hpdi_perform_opt[1],3), ",", round(hpdi_perform_opt[2],3), ")"),
+               paste("(", round(hpdi_perform_unif[1],3), ",", round(hpdi_perform_unif[2],3), ")"),
+               paste("(", round(hpdi_perform_jeffreys[1],3), ",", round(hpdi_perform_jeffreys[2],3), ")"),
+               paste("(", round(hpdi_perform_beta_2[1],3), ",", round(hpdi_perform_beta_2[2],3), ")"))
 )
 
 # Create LaTeX Table
 dfTab_beta <- data_parameter_post_tab
 
 xtab_beta <- xtable(dfTab_beta)
-colnames(xtab_beta) <- c("",
-                          "Age",
-                          "Sex",
-                          "Treat.",
-                          "Inter.",
-                          "Age",
-                          "Sex",
-                          "Treat.",
-                          "Inter.",
-                          "Age",
-                          "Sex",
-                          "Treat.",
-                          "Inter.")
+colnames(xtab_beta) <- c(
+  "",
+  "Age",
+  "Treat.",
+  "Sex",
+  "Perf.",
+  "Age",
+  "Treat.",
+  "Sex",
+  "Perf.",
+  "Age",
+  "Treat.",
+  "Sex",
+  "Perf."
+)
 
 align(xtab_beta) <- rep("c", length(colnames(xtab_beta)) + 1)
 
@@ -434,26 +388,26 @@ print(xtab_beta, floating = FALSE, include.rownames = FALSE, add.to.row = addtor
 #   Plots                                                                   ####
 
 
-# Log-Age Plots
+# Age Plots
 long_data_age <- gather(data_parameter_post, key = "variable", value = "value", 
-                        log_age_beta_opt, log_age_beta_unif)
+                        age_beta_opt, age_beta_unif)
 
 plot_age <- ggplot(long_data_age, aes(x = value, fill = variable)) +
-  geom_density(data = subset(long_data_age, variable == "log_age_beta_unif"), 
+  geom_density(data = subset(long_data_age, variable == "age_beta_unif"), 
                aes(x = value, fill = variable), alpha = 0.95) +
-  geom_density(data = subset(long_data_age, variable == "log_age_beta_opt"), 
+  geom_density(data = subset(long_data_age, variable == "age_beta_opt"), 
                aes(x = value, fill = variable), alpha = 0.8) +
-  labs(title = "Log of Age", x = "", y = "Posterior Density") +
-  scale_fill_manual(values = c("#D55E00", "grey20"), 
+  labs(title = "Age", x = "", y = "Posterior Density") +
+  scale_fill_manual(values = c("#8A0910", "#0072B2"), 
                     name = "Prior",
-                    labels = c("Optimal", "Default")) +
-  geom_errorbarh(aes(xmin = hpdi_age_opt[1], xmax = hpdi_age_opt[2], y = 2.2 * 1.15, height = 0.15), 
-                 color = "#D55E00", alpha = 1, size = 0.5) +
-  geom_errorbarh(aes(xmin = hpdi_age_unif[1], xmax = hpdi_age_unif[2], y = 2.2 * 1.05, height = 0.15), 
-                 color = "grey20", alpha = 1, size = 0.5) +
-  scale_y_continuous(breaks = seq(0, 2.5, by = 0.5), limits = c(0, 2.8)) +  # Adjust y-axis
-  scale_x_continuous(breaks = seq(-1.5, 1.5, by = 0.5), limits = c(-1.0, 1.2)) +  # Adjust x-axis
-  theme_minimal(base_size = 16)+
+                    labels = c("CBF", "Default")) +
+  geom_errorbarh(aes(xmin = hpdi_age_opt[1], xmax = hpdi_age_opt[2], y = 41* 1.15, height = 2),
+                 color = "#8A0910", alpha = 1, size = 1.5) +
+  geom_errorbarh(aes(xmin = hpdi_age_unif[1], xmax = hpdi_age_unif[2], y = 41 * 1.05, height = 2),
+                 color = "#0072B2", alpha = 1, size = 1.5) +
+  #scale_y_continuous(breaks = seq(0, 2.5, by = 0.5), limits = c(0, 8)) +  # Adjust y-axis
+  #scale_x_continuous(breaks = seq(-1.5, 1.5, by = 0.5), limits = c(-0.2, 0.2)) +  # Adjust x-axis
+  theme_light(base_size = 16)+
   theme(plot.title = element_text(hjust = 0.5, size = 22),
         axis.title.x = element_text(size = 18),
         axis.title.y = element_text(size = 18),
@@ -476,16 +430,16 @@ plot_sex <- ggplot(long_data_sex, aes(x = value, fill = variable)) +
   geom_density(data = subset(long_data_sex, variable == "sex_beta_opt"), 
                aes(x = value, fill = variable), alpha = 0.8) +
   labs(title = "Sex", x = "Value", y = "") +
-  scale_fill_manual(values = c("#D55E00", "grey20"), 
+  scale_fill_manual(values = c("#8A0910", "#0072B2"), 
                     name = "Prior",
-                    labels = c("Optimal", "Default")) +
-  geom_errorbarh(aes(xmin = hpdi_sex_opt[1], xmax = hpdi_sex_opt[2], y = 2.2 * 1.15, height = 0.15), 
-                 color = "#D55E00", alpha = 1, size = 0.5) +
-  geom_errorbarh(aes(xmin = hpdi_sex_unif[1], xmax = hpdi_sex_unif[2], y = 2.2 * 1.05, height = 0.15), 
-                 color = "grey20", alpha = 1, size = 0.5) +
-  theme_minimal(base_size = 16) +
+                    labels = c("CBF", "Default")) +
+  geom_errorbarh(aes(xmin = hpdi_sex_opt[1], xmax = hpdi_sex_opt[2], y = 2.0 * 1.15, height = 0.15), 
+                 color = "#8A0910", alpha = 1, size = 1.5) +
+  geom_errorbarh(aes(xmin = hpdi_sex_unif[1], xmax = hpdi_sex_unif[2], y = 2.0 * 1.05, height = 0.15), 
+                 color = "#0072B2", alpha = 1, size = 1.5) +
+  theme_light(base_size = 16) +
   scale_y_continuous(breaks = seq(0, 2.5, by = 0.5), limits = c(0, 2.8)) +  # Adjust y-axis
-  scale_x_continuous(breaks = seq(-1.5, 1.5, by = 0.5), limits = c(-1.0, 1.2)) +  # Adjust x-axis
+  scale_x_continuous(breaks = seq(-1.5, 1.5, by = 0.5), limits = c(-1.2, 1.2)) +  # Adjust x-axis
   theme(plot.title = element_text(hjust = 0.5, size = 22),
         axis.title.x = element_text(size = 18),
         axis.title.y = element_text(size = 18),
@@ -497,26 +451,26 @@ plot_sex <- ggplot(long_data_sex, aes(x = value, fill = variable)) +
 print(plot_sex)
 
 
-# Treatment Plots
-long_data_treat <- gather(data_parameter_post, key = "variable", value = "value", 
-                        treatment_beta_opt, treatment_beta_unif)
+# Performance Plots
+long_data_perform <- gather(data_parameter_post, key = "variable", value = "value", 
+                        perform_beta_opt, perform_beta_unif)
 
-plot_treat <- ggplot(long_data_treat, aes(x = value, fill = variable)) +
-  geom_density(data = subset(long_data_treat, variable == "treatment_beta_unif"), 
+plot_perform <- ggplot(long_data_perform, aes(x = value, fill = variable)) +
+  geom_density(data = subset(long_data_perform, variable == "perform_beta_unif"), 
                aes(x = value, fill = variable), alpha = 0.95) +
-  geom_density(data = subset(long_data_treat, variable == "treatment_beta_opt"), 
+  geom_density(data = subset(long_data_perform, variable == "perform_beta_opt"), 
                aes(x = value, fill = variable), alpha = 0.8) +
-  labs(title = "Treatment", x = "", y = "") +
-  scale_fill_manual(values = c("#D55E00", "grey20"), 
+  labs(title = "Performance Status", x = "Value", y = "") +
+  scale_fill_manual(values = c("#8A0910", "#0072B2"), 
                     name = "Prior",
-                    labels = c("Optimal", "Default")) +
-  geom_errorbarh(aes(xmin = hpdi_treat_opt[1], xmax = hpdi_treat_opt[2], y = 2.2 * 1.15, height = 0.15), 
-                 color = "#D55E00", alpha = 1, size = 0.5) +
-  geom_errorbarh(aes(xmin = hpdi_treat_unif[1], xmax = hpdi_treat_unif[2], y = 2.2 * 1.05, height = 0.15), 
-                 color = "grey20", alpha = 1, size = 0.5) +
-  theme_minimal(base_size = 16) +
-  scale_y_continuous(breaks = seq(0, 2.5, by = 0.5), limits = c(0, 2.8)) +  # Adjust y-axis
-  scale_x_continuous(breaks = seq(-1.5, 1.5, by = 0.5), limits = c(-1.0, 1.2)) +  # Adjust x-axis
+                    labels = c("CBF", "Default")) +
+  geom_errorbarh(aes(xmin = hpdi_perform_opt[1], xmax = hpdi_perform_opt[2], y = 1.5 * 1.15, height = 0.10), 
+                 color = "#8A0910", alpha = 1, size = 1.5) +
+  geom_errorbarh(aes(xmin = hpdi_perform_unif[1], xmax = hpdi_perform_unif[2], y = 1.5 * 1.05, height = 0.10), 
+                 color = "#0072B2", alpha = 1, size = 1.5) +
+  theme_light(base_size = 16) +
+  scale_y_continuous(breaks = seq(0, 2.5, by = 0.5), limits = c(0, 2.0)) +  # Adjust y-axis
+  scale_x_continuous(breaks = seq(-2, 2, by = 0.5), limits = c(-2, 1)) +  # Adjust x-axis
   theme(plot.title = element_text(hjust = 0.5, size = 22),
         axis.title.x = element_text(size = 18),
         axis.title.y = element_text(size = 18),
@@ -524,22 +478,49 @@ plot_treat <- ggplot(long_data_treat, aes(x = value, fill = variable)) +
         axis.text.y = element_text(size = 16),
         axis.text.x = element_text(size = 16))
 
-# Print the plot
+# Print the Plot
+print(plot_perform)
+
+
+# Treatment Plots
+long_data_treat <- gather(data_parameter_post, key = "variable", value = "value", 
+                          treat_beta_opt, treat_beta_unif)
+
+plot_treat <- ggplot(long_data_treat, aes(x = value, fill = variable)) +
+  geom_density(data = subset(long_data_treat, variable == "treat_beta_unif"), 
+               aes(x = value, fill = variable), alpha = 0.95) +
+  geom_density(data = subset(long_data_treat, variable == "treat_beta_opt"), 
+               aes(x = value, fill = variable), alpha = 0.8) +
+  labs(title = "Treatment", x = "Value", y = "") +
+  scale_fill_manual(values = c("#8A0910", "#0072B2"), 
+                    name = "Prior",
+                    labels = c("CBF", "Default")) +
+  geom_errorbarh(aes(xmin = hpdi_treat_opt[1], xmax = hpdi_treat_opt[2], y = 1.8 * 1.15, height = 0.10), 
+                 color = "#8A0910", alpha = 1, size = 1.5) +
+  geom_errorbarh(aes(xmin = hpdi_treat_unif[1], xmax = hpdi_treat_unif[2], y = 1.8 * 1.05, height = 0.10), 
+                 color = "#0072B2", alpha = 1, size = 1.5) +
+  theme_light(base_size = 16) +
+  scale_y_continuous(breaks = seq(0, 2.5, by = 0.5), limits = c(0, 2.2)) +  # Adjust y-axis
+  # scale_x_continuous(breaks = seq(-1.5, 1.5, by = 0.5), limits = c(-1.2, 1.2)) +  # Adjust x-axis
+  theme(plot.title = element_text(hjust = 0.5, size = 22),
+        axis.title.x = element_text(size = 18),
+        axis.title.y = element_text(size = 18),
+        panel.grid.major.x = element_blank(),
+        axis.text.y = element_text(size = 16),
+        axis.text.x = element_text(size = 16))
+
+# Print the Plot
 print(plot_treat)
 
-plot_comb <- ggarrange(plot_age, plot_sex, plot_treat, ncol = 3, nrow = 1, common.legend = TRUE, legend = "bottom")
-print(plot_comb)
 
-ggsave(filename = "post_param_melanoma.pdf",path = "Plots", plot = plot_comb,
-       width = 15, height = 8, device='pdf', dpi=500, useDingbats = FALSE)
-
-
-
+# plot_comb <- ggarrange(plot_age, plot_treat, plot_sex, plot_perform,  ncol = 2,
+#                        nrow = 2, common.legend = TRUE, legend = "bottom")
+# print(plot_comb)
 
 
 # Delta plot
 long_data_delta <- gather(data_parameter_post, key = "variable", value = "value", 
-                          delta_opt, delta_unif, delta_KL, delta_MSE, delta_opt_jeffreys)
+                          delta_opt, delta_unif)
 hpdi_delta_opt <- rethinking::HPDI( data_parameter_post$delta_opt, prob = 0.95)
 hpdi_delta_unif <- rethinking::HPDI( data_parameter_post$delta_unif, prob = 0.95)
 plot_delta <- ggplot(long_data_delta, aes(x = value, fill = variable)) +
@@ -551,9 +532,9 @@ plot_delta <- ggplot(long_data_delta, aes(x = value, fill = variable)) +
   scale_fill_manual(values = c("#D55E00", "grey20"), 
                     name = "Prior: ",
                     labels = c("Optimal", "Default")) +
-  geom_errorbarh(aes(xmin = hpdi_delta_opt[1], xmax = hpdi_delta_opt[2], y = 1.8 * 1.15, height = 0.15), 
+  geom_errorbarh(aes(xmin = hpdi_delta_opt[1], xmax = hpdi_delta_opt[2], y = 15 * 1.15, height = 0.15), 
                  color = "#D55E00", alpha = 1, size = 0.5) +
-  geom_errorbarh(aes(xmin = hpdi_delta_unif[1], xmax = hpdi_delta_unif[2], y = 1.8 * 1.05, height = 0.15), 
+  geom_errorbarh(aes(xmin = hpdi_delta_unif[1], xmax = hpdi_delta_unif[2], y = 15 * 1.05, height = 0.15), 
                  color = "grey20", alpha = 1, size = 0.5) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5),
@@ -561,5 +542,75 @@ plot_delta <- ggplot(long_data_delta, aes(x = value, fill = variable)) +
 
 # Print the plot
 print(plot_delta)
+
+
+
+#   ____________________________________________________________________________
+#   Plots  with facet_wrap                                                  ####
+
+
+data_combined <- bind_rows(
+  mutate(long_data_age, category = "Age"),
+  mutate(long_data_sex, category = "Sex"),
+  mutate(long_data_perform, category = "Performance"),
+  mutate(long_data_treat, category = "Treatment")
+)
+
+
+# Ensure 'variable' is a factor and its levels match the ones used in scale_fill_manual
+data_combined$variable <- factor(data_combined$variable, levels = c("age_beta_opt", "age_beta_unif", "sex_beta_opt", "sex_beta_unif", "perform_beta_opt", "perform_beta_unif", "treat_beta_opt", "treat_beta_unif"))
+data_combined$prior_type <- ifelse(grepl("opt", data_combined$variable), "CBF", "Uniform")
+
+
+error_bars_df <- data.frame(
+  category = rep(c("Age", "Sex", "Performance", "Treatment"), each = 2),
+  xmin = c(hpdi_age_opt[1], hpdi_age_unif[1], hpdi_sex_opt[1], hpdi_sex_unif[1], 
+           hpdi_perform_opt[1], hpdi_perform_unif[1], hpdi_treat_opt[1], hpdi_treat_unif[1]),
+  xmax = c(hpdi_age_opt[2], hpdi_age_unif[2], hpdi_sex_opt[2], hpdi_sex_unif[2], 
+           hpdi_perform_opt[2], hpdi_perform_unif[2], hpdi_treat_opt[2], hpdi_treat_unif[2]),
+  y = c(41 * 1.15, 41 * 1.05, 2.0 * 1.15, 2.0 * 1.05, 
+        1.5 * 1.15, 1.5 * 1.05, 1.8 * 1.15, 1.8 * 1.05),
+  height = c(2, 2, 0.15, 0.15, 0.10, 0.10, 0.10, 0.10),
+  color = rep(c("#8A0910", "#0072B2"), 4),
+  alpha = rep(1, 8),
+  size = rep(1.5, 8)
+)
+
+# Custom names for each category
+facet_names <- c(Age = "Age", 
+                 Sex = "Sex", 
+                 Performance = "Performance Status", 
+                 Treatment = "Treatment")
+
+
+# Plotting "Uniform" densities first ensures they are in the background
+plot_combined <- ggplot() +
+  geom_density(data = filter(data_combined, prior_type == "Uniform"), 
+               aes(x = value, fill = prior_type), alpha = 0.75) +
+  geom_density(data = filter(data_combined, prior_type == "CBF"), 
+               aes(x = value, fill = prior_type), alpha = 0.75) +
+  scale_fill_manual(values = c("CBF" = "#8A0910", "Uniform" = "#0072B2")) +
+  facet_wrap(~category, scales = "free", labeller = as_labeller(facet_names)) +
+  geom_errorbarh(data = error_bars_df, aes(xmin = xmin, xmax = xmax, y = y, height = height), 
+                 inherit.aes = FALSE, color = error_bars_df$color, alpha = error_bars_df$alpha, size = error_bars_df$size) +
+  theme_bw(base_size = 18) +
+  theme(legend.position = "top",
+        legend.title = element_text(size = 18, face = "bold"),
+        legend.text = element_text(size = 18),
+        plot.title = element_text(hjust = 0.5, size = 22),
+        axis.title.x = element_text(size = 20),
+        axis.title.y = element_text(size = 20),
+        panel.grid.major.x = element_blank(),
+        axis.text.y = element_text(size = 18),
+        axis.text.x = element_text(size = 18),
+        strip.text.x = element_text(size = 18)) +
+  labs(y = "Density", x = "Values") +
+  guides(fill = guide_legend(title = expression(bold(paste("Prior for ", delta, ":")))))
+# Print the combined plot with specified layering
+print(plot_combined)
+
+
+ggsave(filename = "post_param_melanoma.pdf",path = "Plots", plot = plot_combined,
+       width = 15, height = 10, device='pdf', dpi=500, useDingbats = FALSE)
 
 

@@ -30,34 +30,25 @@ source("R/CBF_Functions.R")
 #   Data                                                                    ####
 
 
-data <- read_excel("Data/trial_e1684_e1690_Merged.xlsx", 
-                   col_types = c("numeric", "numeric", "numeric", 
-                                 "numeric", "numeric", "numeric", 
-                                 "numeric", "numeric", "numeric", 
-                                 "numeric", "numeric", "numeric", 
-                                 "numeric"))
+library(hdbayes)
 
-historical_data <- filter(data, study == 1684)[,-2]
-current_data <- filter(data, study == 1690)[,-2]
+data("E2696")
+# data("E1694")
 
-## Standardization ##
+historical_data <- E2696
 
-log_age_hist <- log(historical_data$age)
-log_age_current <- log(current_data$age)
+
 
 
 #   ____________________________________________________________________________
 #   STAN Parameter Configuration                                            ####
 
-N_0 <- length(log_age_hist)
-X_0 <- cbind(log_age_hist, # x1 - log age 
-             historical_data$sex, # x2 - gender
-             historical_data$trt # x3 treatment
+N_0 <- nrow(historical_data)
+X_0 <- cbind(historical_data$age, # x1 - age 
+            historical_data$treatment, # x2 - treatment
+            historical_data$sex, # x4 race
+            historical_data$perform # x4 cd4
 )
-Y_0_cens <- historical_data$survtime
-Cens_0 <- historical_data$scens
-
-
 #   ____________________________________________________________________________
 #   Power Prior Sampling Estimates                                          ####
 
@@ -65,11 +56,9 @@ Cens_0 <- historical_data$scens
 historical_data_norm_pp <- list(
   N0 = N_0,
   P = ncol(X_0),
-  y0 = Cens_0,
+  y0 = historical_data$failind,
   X0 = X_0,
-  sex_0 = historical_data$sex,
-  treat_0 = historical_data$trt,
-  delta = 0.05
+  a_0 = NULL
 )
 
 ##  ............................................................................
@@ -83,7 +72,7 @@ epsilon <- 0.05
 ##  ............................................................................
 ##  Estimates                                                               ####
 
-prior <- stan_model("R/Melanoma/STAN/Normalizing_Constant_PP_Logit.stan")
+prior <- stan_model("STAN/Normalizing_Constant_PP_Logit.stan")
 
 time_eval <- system.time(
   delta_estimates <- build_grid(
@@ -94,8 +83,7 @@ time_eval <- system.time(
     v1 = 10,
     v2 = 10,
     stan.list = historical_data_norm_pp,
-    pars = c("alpha", "beta"),
-    strict = FALSE
+    pars = c("alpha", "beta")
   )
 )
 

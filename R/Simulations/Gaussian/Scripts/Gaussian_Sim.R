@@ -69,7 +69,22 @@ theta_m_post <- function(theta_seq, theta, theta_0, st_dev, st_dev_0, eta, nu){
   return(theta_post)
 }
   
+## Marginal Posterior of Delta
 
+delta_m_post <- function(delta_seq, theta, theta_0, st_dev, st_dev_0, eta, nu){
+  # Marginal Likelihood Function
+  intFun <- function(delta) {
+    dnorm(x = theta, mean = theta_0, sd = sqrt(se^2 + se_0^2/delta)) *
+      dbeta(x = delta, shape1 = eta_null, shape = nu_null)
+  }
+  
+  normconst <- integrate(f = intFun, lower = 0, upper = 1)$value
+  num_delta <- dnorm(x = theta, mean = theta_0, sd = (st_dev+st_dev_0/sqrt(delta_seq)))*
+               dbeta(x = delta_seq, shape1 = eta, shape2 = nu)
+  delta_post <- num_delta/normconst
+  
+  return(delta_post)
+}
 
 ## Marginal Likelihood Function
 

@@ -50,7 +50,7 @@ calculate_maximized_value <- function(distribution_values, observed_BF, hpdi_pro
 fixed_posterior <- function(stan_setup_list,
                             stan_file_list,
                             iterations = 2000,
-                            treedepth_max = 10,
+                            treedepth_max = 15,
                             adaptive_delta = 0.95) {
   fixed_pp_stan <- list()
   for (i in 1:length(stan_setup_list)) {
@@ -82,7 +82,7 @@ fixed_posterior <- function(stan_setup_list,
 unnormalized_posterior_sampl <- function(stan_setup_list,
                                          stan_file_list,
                                          iterations = 2000,
-                                         treedepth_max = 10,
+                                         treedepth_max = 15,
                                          adaptive_delta = 0.95,
                                          chains = 4, 
                                          ref_rate = max(iterations/10, 1),
@@ -129,7 +129,7 @@ unnormalized_posterior_sampl <- function(stan_setup_list,
 unnormalized_posterior <- function(stan_setup_list,
                                    stan_file_list,
                                    iterations = 2000,
-                                   treedepth_max = 10,
+                                   treedepth_max = 15,
                                    adaptive_delta = 0.95) {
   random_pp_stan <- list()
   for (i in 1:length(stan_setup_list)) {
@@ -170,7 +170,7 @@ norm_post_pp <- function(K,
                          stan_setup_list,
                          stan_file_list,
                          iterations = 2000,
-                         treedepth_max = 10,
+                         treedepth_max = 15,
                          adaptive_delta = 0.95,
                          chains = 4, 
                          ref_rate = max(iterations/10, 1)) {
@@ -215,7 +215,7 @@ norm_posterior_K <- function( K,
                               stan_setup_list,
                               stan_file_list,
                               iterations = 2000,
-                              treedepth_max = 10,
+                              treedepth_max = 15,
                               adaptive_delta = 0.95) {
   cat("Doing Beta with (eta,nu) =",
       c(stan_setup_list$eta, stan_setup_list$nu),
@@ -244,7 +244,7 @@ app_norm_post <- function(K,
                           stan_setup_list,
                           stan_file_list,
                           iterations = 2000,
-                          treedepth_max = 10) {
+                          treedepth_max = 15) {
   norm_post_value <- list()
   for (i in 1:length(stan_setup_list)) {
     norm_post_value[[i]] <- lapply(K, stan_setup_list = stan_setup_list[[i]], stan_file_list = stan_file_list, norm_posterior_K)

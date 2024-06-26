@@ -27,13 +27,9 @@ data {
   int<lower=0> N0;
   int<lower=0> P;
   matrix[N0, P] X0;
-  vector[N0] sex_0;
-  vector[N0] treat_0;
   int<lower=0, upper=1> y0[N0];
   int<lower=0> N;
   matrix[N, P] X;
-  vector[N] sex;
-  vector[N] treat;
   int<lower=0, upper=1> y_rep[N];
   real<lower=0> eta;
   real<lower=0> nu;
@@ -45,17 +41,15 @@ data {
 parameters {
   real alpha;
   vector[P] beta;
-  real beta_inter;
   real<lower=0, upper=1> delta;
 }
 model {
   /* Power prior */
   target += -approximate_ca0(delta, pred_grid_x, pred_grid_y);
-  target += normal_lpdf(alpha | 0, 1);
-  target += normal_lpdf(beta | 0, 1);
-  target += normal_lpdf(beta_inter | 0, 1);
-  target += delta * bernoulli_logit_lpmf(y0 | alpha + X0*beta + sex_0.*treat_0*beta_inter);
+  target += normal_lpdf(alpha | 0, 10);
+  target += normal_lpdf(beta | 0, 10);
+  target += delta * bernoulli_logit_lpmf(y0 | alpha + X0*beta);
   target += beta_lpdf(delta | eta, nu);
   /* Likelihood */
-  target += bernoulli_logit_lpmf(y_rep | alpha + X*beta + sex.*treat*beta_inter);
+  target += bernoulli_logit_lpmf(y_rep | alpha + X*beta);
 }
