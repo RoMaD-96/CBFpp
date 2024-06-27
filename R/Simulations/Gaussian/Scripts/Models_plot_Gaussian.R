@@ -210,13 +210,15 @@ gaussian_comp <- ggplot(results_df, aes(x = theta_dif, y = median, color = hpdi_
   #facet_wrap(~ hpdi_val, ncol = 1, scales = "free_y", labeller = labeller(hpdi_val = facet_titles)) +
   theme_bw(base_size = 16) +
   theme(
-    legend.position = "none",
-    plot.title = element_blank(),
-    axis.title.x = element_text(size = 20, face = "bold"),
-    axis.title.y = element_text(size = 20, face = "bold"),
-    panel.grid.major.x = element_blank(),
+    axis.title.x = element_text(size = 22),
+    axis.title.y = element_text(size = 22),
     axis.text.y = element_text(size = 18),
-    axis.text.x = element_text(size = 18, angle = 30, vjust = 1)) + # Adjust the angle and vertical alignment here
+    axis.text.x = element_text(size = 18, angle = 30, vjust = 1),
+    plot.title = element_text(hjust = 0.5, size = 22),
+    panel.grid.major.x = element_blank(),
+    legend.position = "none",
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 18)) + # Adjust the angle and vertical alignment here
   labs(
     #title = expression("Gaussian with unknown mean " * mu),
     x = expression("Values of " * (mu[r]-mu[o])),
@@ -261,7 +263,7 @@ standard_dev_plot <- ggplot(df_long, aes(x = theta_dif, y = value, color = sd_ty
     axis.text.y = element_text(size = 18),
     legend.position = "top",
     legend.title = element_text(size = 18, face = "bold"),
-    legend.text = element_text(size = 18),
+    legend.text = element_text(size = 18)
   ) +
   scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 0.2), 
                      guide = guide_axis(check.overlap = TRUE))

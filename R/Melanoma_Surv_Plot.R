@@ -11,6 +11,7 @@ packages <- c(
   "ggridges",
   "tidyverse",
   "tidyr",
+  "grid",
   "xtable",
   "tibble",
   "survival",
@@ -60,7 +61,7 @@ plot_hd <- ggsurvplot(hd_surv, data = historical_data, combine = TRUE,
            onf.int.style = "step",
            palette = c("#4F7942", "#F46D43"),
            xlab = NULL, 
-           ylab = "Survival Probability",
+           ylab = NULL,
            ggtheme = theme_bw(),         # Cleaner theme
            risk.table = "percentage",                 # Add risk table
            risk.table.col = "strata",         # Color the risk table by groups
@@ -111,8 +112,8 @@ plot_cd <-
     onf.int.style = "step",
     palette = c("#4F7942", "#F46D43"),
     # Improved color palette
-    xlab = "Months",
-    ylab = "Survival Probability",
+    xlab = NULL,
+    ylab = NULL,
     ggtheme = theme_bw(),
     # Cleaner theme
     risk.table = "percentage",
@@ -157,6 +158,10 @@ plot_cd <-
 plot_cd 
 
 melanoma_surv <- grid.arrange(plot_hd, plot_cd, nrow = 2)
+
+melanoma_surv <- annotate_figure(melanoma_surv, left = textGrob("Survival Probability", rot = 90, vjust = 0.7, gp = gpar(cex = 1.8)),
+                                         bottom = textGrob("Months", vjust = -0.1,  gp = gpar(cex = 1.8)))
+
 
 
 ggsave(filename = "melanoma_surv.pdf",path = "Plots", plot = melanoma_surv,

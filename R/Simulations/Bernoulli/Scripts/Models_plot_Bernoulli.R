@@ -268,8 +268,8 @@ binomial_comp <- ggplot(results_df, aes(x = theta_dif, y = median, color = hpdi_
   theme(
     legend.position = "none",
     plot.title = element_text(hjust = 0.5, size = 22),
-    axis.title.x = element_text(size = 20, face = "bold"),
-    axis.title.y = element_text(size = 20, face = "bold"),
+    axis.title.x = element_text(size = 22, face = "bold"),
+    axis.title.y = element_text(size = 22, face = "bold"),
     panel.grid.major.x = element_blank(),
     axis.text.y = element_text(size = 18),
     axis.text.x = element_text(size = 18, angle = 0, vjust = 1)) + # Adjust the angle and vertical alignment here
