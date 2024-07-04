@@ -1,18 +1,11 @@
 
 packages <- c(
-  "rethinking",
   "ggpubr",
-  "rstan",
-  "bridgesampling",
   "dplyr",
-  "readxl",
-  "progressr",
   "ggplot2",
-  "ggridges",
   "tidyverse",
   "tidyr",
   "grid",
-  "xtable",
   "tibble",
   "survival",
   "survminer",
@@ -29,8 +22,6 @@ if (any(installed_packages == FALSE)) {
 # Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
-
-source("R/CBF_Functions.R")
 
 #   ____________________________________________________________________________
 #   Datasets                                                                ####
@@ -166,80 +157,3 @@ melanoma_surv <- annotate_figure(melanoma_surv, left = textGrob("Survival Probab
 
 ggsave(filename = "melanoma_surv.pdf",path = "Plots", plot = melanoma_surv,
        width = 15, height = 10, device='pdf', dpi=500, useDingbats = FALSE)
-
-# ggsurvplot_combine(
-#   list(hd_surv, cd_surv),
-#   list(historical_data, current_data),
-#   pval = FALSE, 
-#   conf.int = TRUE, 
-#   onf.int.style = "step",
-#   xlab = "Months", 
-#   ylab = "Survival Probability",
-#   ggtheme = theme_bw(),         # Cleaner theme
-#   risk.table = "percentage",                 # Add risk table
-#   risk.table.col = "strata",         # Color the risk table by groups
-#   risk.table.height = 0.2,           # Adjust risk table height
-#   linetype = 1,               # Different line types for groups
-#   size = 1,                          # Adjust line size
-#   # legend.labs = c("GMK", "GMK + IFN","GMK", "IFN"), # Custom legend labels
-#   # legend.title = c("Treatment:"),
-#   title = "",                        # Plot title
-#   # surv.median.line = "hv",            # Add median survival lines
-#   font.main = c(22),
-#   font.x = c(20),
-#   font.y = c(20),
-#   font.tickslab = c(16),
-#   tables.theme = theme_cleantable(),
-#   risk.table.fontsize = 4.5,
-#   break.time.by = 5)
-# 
-# 
-# 
-# 
-# 
-# 
-# # Assuming historical_data and current_data are already loaded
-# historical_data$dataset_type <- 'Historical'  # Add a new column to distinguish the data
-# current_data$dataset_type <- 'Current'
-# 
-# # Combine the data frames
-# combined_data <- rbind(historical_data, current_data)
-# 
-# # Convert treatment_group to a factor for faceting
-# combined_data$dataset_type <- factor(combined_data$dataset_type, levels = c("Historical", "Historical"))
-# 
-# combined_surv <- survfit(Surv(failtime, failind) ~ treatment , data = combined_data)
-# ggsurv <- ggsurvplot(combined_surv, data = combined_data, combine = TRUE, # Combine curves
-#                      pval = FALSE, 
-#                      conf.int = TRUE, 
-#                      onf.int.style = "step",
-#                      palette = c("deepskyblue3", "firebrick3"), # Improved color palette
-#                      xlab = "Months", 
-#                      ylab = "Survival Probability",
-#                      ggtheme = theme_bw(),         # Cleaner theme
-#                      risk.table = "percentage",                 # Add risk table
-#                      risk.table.col = "strata",         # Color the risk table by groups
-#                      risk.table.height = 0.2,           # Adjust risk table height
-#                      linetype = 1,               # Different line types for groups
-#                      size = 1,                          # Adjust line size
-#                      legend.labs = c("GMK", "IFN"), # Custom legend labels
-#                      legend.title = "Treatment:",
-#                      title = "",                        # Plot title
-#                      # surv.median.line = "hv",            # Add median survival lines
-#                      font.main = c(22),
-#                      font.x = c(20),
-#                      font.y = c(20),
-#                      font.tickslab = c(16),
-#                      tables.theme = theme_cleantable(),
-#                      risk.table.fontsize = 4.5,
-#                      break.time.by = 5)
-# 
-# 
-# # Load survminer for plotting
-# library(survminer)
-# ggsurvplot_facet(combined_surv, data = combined_data, facet.by = "dataset_type",
-#                  pval = FALSE, conf.int = TRUE,
-#                  xlab = "Months", ylab = "Survival Probability",
-#                  ggtheme = theme_bw(), legend.labs = c("GMK", "IFN"), # Custom legend labels
-#                 nrow = 2,
-#                  palette = "simpsons", scales = "free_x")

@@ -124,7 +124,7 @@ unnormalized_posterior_sampl <- function(stan_setup_list,
   
 }
 
-### Using stan() function ###
+### Using stan() function
 
 unnormalized_posterior <- function(stan_setup_list,
                                    stan_file_list,

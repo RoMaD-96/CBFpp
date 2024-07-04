@@ -13,13 +13,11 @@ packages <- c(
   "modi"
 )
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
 
@@ -35,7 +33,7 @@ options(mc.cores = 4)
 stan_model <- list("R/Simulations/Poisson/STAN/Poisson_Norm.stan")
 
 
-# Define the function to process the datasets in a specific directory
+# Function to process the datasets in a specific directory
 process_datasets <- function() {
   # Define the path to the directory
   path <- "R/Simulations/Poisson/RData"
@@ -45,17 +43,17 @@ process_datasets <- function() {
   files <- list.files(path, pattern = "\\.RData$", full.names = TRUE)
   files <- gtools::mixedsort(files)
   hpdi <- c(0.75)
-  # Initialize a list to store results
+
   results <- list()
   
-  # Loop through each file
+
   for (file in files) {
-    # Load the dataset
+
     load(file)
     stan_model <- list("R/Simulations/Poisson/STAN/Poisson_Norm.stan")
     source("R/CBF_Functions.R")
-    # Assuming the data is loaded into 'bf_data'
-    # Reshape the data into long format
+
+    
     bf_data_long <- bf_data %>%
       mutate(row_id = row_number()) %>%
       pivot_longer(cols = -row_id, names_to = "Column", values_to = "Value")
@@ -150,10 +148,10 @@ flatten_results <- function(results_list) {
   return(flattened)
 }
 
-# Convert the nested list into a flattened DataFrame
+# Convert the nested list into a flattened Dataframe
 results_df <- flatten_results(results_opt_beta)
 
-# Ensure the column names are correct
+
 correct_col_names <- c("file", "opt_index", "eta", "nu", "lambda_dif", 
                        "first_q", "median", "third_q", "mean", "hpdi_val", 
                        "sd_lambda_ref", "sd_lambda_alter",
@@ -165,27 +163,18 @@ results_df$hpdi_val <- factor(results_df$hpdi_val, levels = c("0.75"))# Print th
 print(results_df)
 
 
-# results_df <- results_df %>% 
-#   group_by(file, opt_index) %>%
-#   # Compute the minimum sd for each combination of model and opt_index
-#   mutate(min_sd = min(sd_lambda_alter)) %>%
-#   ungroup() %>%
-#   # Replace the sd with the calculated minimum sd 
-#   mutate(sd_lambda_alter = min_sd) %>%
-#   select(-min_sd)  
-
 #   ____________________________________________________________________________
 #   Plots                                                                   ####
 
 # Custom titles for facets
 facet_titles <- setNames(c("75% HPDI"), levels(results_df$hpdi_val))
-# Your ggplot code with corrected facet titles
+
+
 poisson_comp <- ggplot(results_df, aes(x = lambda_dif, y = median, color = hpdi_val, group = hpdi_val)) +
   geom_point(size=2.5) +
   geom_line(size=1) +
   geom_errorbar(aes(ymin = first_q, ymax = third_q), width = 0.015, size = 1.4) +
   geom_text(aes(y = third_q, label = paste("(", eta, ",", nu, ")")), vjust = -0.8, hjust = -0.2, size = 5.3, angle = 60, check_overlap = FALSE) +
-  #facet_wrap(~ hpdi_val, ncol = 1, scales = "free_y", labeller = labeller(hpdi_val = facet_titles)) +
   theme_bw(base_size = 16) +
   theme(
     legend.position = "none",
@@ -217,7 +206,6 @@ df_long <- pivot_longer(results_df, cols = c(sd_lambda_ref, sd_lambda_alter), na
 standard_dev_plot <- ggplot(df_long, aes(x = lambda_dif, y = value, color = sd_type, shape = sd_type, group = sd_type)) +
   geom_point(position = position_dodge(width = 0), size = 3.8) +
   geom_line(position = position_dodge(width = 0), size = 1.5) +
-  #facet_wrap(~ hpdi_val, scales = "free", labeller = labeller(hpdi_val = facet_titles)) +
   scale_color_manual(values = c("#8A0910", "#0072B2"), 
                      labels = c("CBF", "Uniform")) +
   scale_shape_manual(values = c(20, 18), 
@@ -241,7 +229,7 @@ standard_dev_plot <- ggplot(df_long, aes(x = lambda_dif, y = value, color = sd_t
   scale_x_continuous(breaks = seq(0, max(results_df$lambda_dif), 0.05), 
                      guide = guide_axis(check.overlap = TRUE))
 
-# Display the plot
+
 print(standard_dev_plot)
 
 ggsave(filename = "sd_poisson_comp.pdf",path = "Plots", plot = standard_dev_plot,
@@ -250,9 +238,11 @@ ggsave(filename = "sd_poisson_comp.pdf",path = "Plots", plot = standard_dev_plot
 
 
 #   ____________________________________________________________________________
-#   ggarrange Combined Plot                                                 ####
+#   Combined Plot                                                           ####
 
 
+##  ............................................................................
+##  Lambda plot                                                             ####
 
 
 # Combine the data for both plots
@@ -274,20 +264,8 @@ combined_df <- combined_df %>%
     type %in% c("sd_lambda_ref", "mean_lambda_ref") ~ "Uniform"
   ))
 
-# # Define the levels for plot_type and convert it to a factor
-# combined_df$plot_type <- factor(combined_df$plot_type, levels = c("Standard Deviation", "Mean"))
-# 
-# #Define facet labels
-# facet_labels <- c(
-#   "Standard Deviation" = expression("SD of " * pi(theta ~ "|" ~ y[0] ~ "," ~ y)),
-#   "Mean" = expression("Mean of " * pi(theta ~ "|" ~ y[0] ~ "," ~ y))
-# )
-# 
-# 
-# levels(combined_df$plot_type) <- facet_labels
 
-# Plot
-combined_plot_theta <- ggplot(combined_df, aes(x = lambda_dif, y = value, color = prior, shape = prior, group = interaction(type, plot_type))) +
+combined_plot_lambda <- ggplot(combined_df, aes(x = lambda_dif, y = value, color = prior, shape = prior, group = interaction(type, plot_type))) +
   geom_point(position = position_dodge(width = 0), size = 3.8) +
   geom_line(position = position_dodge(width = 0), size = 1.5) +
   facet_wrap(~ plot_type, ncol = 1, scales = "free_y", labeller = labeller(plot_type = c("Standard Deviation" = "Standard Deviation", "Mean" = "Mean"))) +
@@ -314,7 +292,15 @@ combined_plot_theta <- ggplot(combined_df, aes(x = lambda_dif, y = value, color 
   guides(color = guide_legend(title.position = "top"), shape = guide_legend(title.position = "top"))
 
 # Display the plot
-print(combined_plot_theta)
+print(combined_plot_lambda)
+
+
+
+
+
+##  ............................................................................
+##  Plot delta                                                              ####
+
 
 
 
@@ -338,18 +324,7 @@ combined_df <- combined_df %>%
     type %in% c("sd_delta_ref", "mean_delta_ref") ~ "Uniform"
   ))
 
-# # Define the levels for plot_type and convert it to a factor
-# combined_df$plot_type <- factor(combined_df$plot_type, levels = c("Standard Deviation", "Mean"))
-# 
-# # Define facet labels
-# facet_labels <- c(
-#   "Standard Deviation" = expression("Standard Deviation of " * pi(delta ~ "|" ~ y[0] ~ "," ~ y)),
-#   "Mean" = expression("Mean of " * pi(delta ~ "|" ~ y[0] ~ "," ~ y))
-# )
-# 
-# levels(combined_df$plot_type) <- facet_labels
 
-# Plot
 combined_plot_delta <- ggplot(combined_df, aes(x = lambda_dif, y = value, color = prior, shape = prior, group = interaction(type, plot_type))) +
   geom_point(position = position_dodge(width = 0), size = 3.8) +
   geom_line(position = position_dodge(width = 0), size = 1.5) +
@@ -376,59 +351,20 @@ combined_plot_delta <- ggplot(combined_df, aes(x = lambda_dif, y = value, color 
   scale_x_continuous(breaks = seq(0, max(results_df$lambda_dif), 0.05), guide = guide_axis(check.overlap = TRUE)) +
   guides(color = guide_legend(title.position = "top"), shape = guide_legend(title.position = "top"))
 
-# Display the plot
 print(combined_plot_delta)
 
 
-plot_comb_delta_theta <- ggarrange(combined_plot_theta, combined_plot_delta, ncol = 2, nrow = 1, 
+
+##  ............................................................................
+##  Combined plot for theta and delta                                       ####
+
+
+
+plot_comb_delta_lambda <- ggarrange(combined_plot_lambda, combined_plot_delta, ncol = 2, nrow = 1, 
                                    common.legend = TRUE, legend = "top")
-plot_comb_delta_theta <- annotate_figure(plot_comb_delta_theta, left = textGrob("Posterior Values", rot = 90, vjust = 0.8, gp = gpar(cex = 1.8)),
+plot_comb_delta_lambda <- annotate_figure(plot_comb_delta_lambda, left = textGrob("Posterior Values", rot = 90, vjust = 0.8, gp = gpar(cex = 1.8)),
                                          bottom = textGrob(expression("Values of " * (lambda[c]-lambda[0])), vjust = -0.1,  gp = gpar(cex = 1.8)))
 
 
-ggsave(filename = "combined_plot_poisson.pdf",path = "Plots", plot = plot_comb_delta_theta,
+ggsave(filename = "combined_plot_poisson.pdf",path = "Plots", plot = plot_comb_delta_lambda,
        width = 15, height = 10, device='pdf', dpi=500, useDingbats = FALSE)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# plot_comb <- ggarrange(poisson_comp, standard_dev_plot, ncol = 1, nrow = 2, 
-#                        common.legend = FALSE, heights = c(1.5,1))
-# 
-# ggsave(filename = "plot_comb_poisson_comp.pdf",path = "Plots", plot = plot_comb,
-#        width = 15, height = 13, device='pdf', dpi=500, useDingbats = FALSE)

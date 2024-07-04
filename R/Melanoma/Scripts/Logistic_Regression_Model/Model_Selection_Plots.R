@@ -17,13 +17,11 @@ packages <- c(
   "tibble"
 )
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
 
@@ -63,7 +61,6 @@ data_structure <- function(path, n_files){
   # Number of models
   num_models <- 64
   
-  # Creare una nuova lista vuota per contenere gli elementi raggruppati
   grouped_list <- vector("list", num_models)
   
   for(i in 1:num_models){
@@ -134,18 +131,18 @@ plot(fit_gam)
 
 
 N_0 <- nrow(historical_data)
-X0 <- cbind(historical_data$age, # x1 - age 
-            historical_data$treatment, # x2 - treatment
-            historical_data$sex, # x4 race
-            historical_data$perform # x4 cd4
+X0 <- cbind(historical_data$age, 
+            historical_data$treatment, 
+            historical_data$sex, 
+            historical_data$perform 
 )
 
 
 N <- nrow(current_data)
-X <- cbind(current_data$age, # x1 - age 
-           current_data$treatment, # x2 - treatment
-           current_data$sex, # x4 race
-           current_data$perform # x4 cd4
+X <- cbind(current_data$age, 
+           current_data$treatment,
+           current_data$sex,
+           current_data$perform
 )
 #   ____________________________________________________________________________
 #   Model Specification                                                     ####
@@ -405,8 +402,7 @@ plot_age <- ggplot(long_data_age, aes(x = value, fill = variable)) +
                  color = "#8A0910", alpha = 1, size = 1.5) +
   geom_errorbarh(aes(xmin = hpdi_age_unif[1], xmax = hpdi_age_unif[2], y = 41 * 1.05, height = 2),
                  color = "#0072B2", alpha = 1, size = 1.5) +
-  #scale_y_continuous(breaks = seq(0, 2.5, by = 0.5), limits = c(0, 8)) +  # Adjust y-axis
-  #scale_x_continuous(breaks = seq(-1.5, 1.5, by = 0.5), limits = c(-0.2, 0.2)) +  # Adjust x-axis
+
   theme_light(base_size = 16)+
   theme(plot.title = element_text(hjust = 0.5, size = 22),
         axis.title.x = element_text(size = 18),
@@ -513,40 +509,36 @@ plot_treat <- ggplot(long_data_treat, aes(x = value, fill = variable)) +
 print(plot_treat)
 
 
-# plot_comb <- ggarrange(plot_age, plot_treat, plot_sex, plot_perform,  ncol = 2,
-#                        nrow = 2, common.legend = TRUE, legend = "bottom")
-# print(plot_comb)
-
-
-# Delta plot
-long_data_delta <- gather(data_parameter_post, key = "variable", value = "value", 
-                          delta_opt, delta_unif)
-hpdi_delta_opt <- rethinking::HPDI( data_parameter_post$delta_opt, prob = 0.95)
-hpdi_delta_unif <- rethinking::HPDI( data_parameter_post$delta_unif, prob = 0.95)
-plot_delta <- ggplot(long_data_delta, aes(x = value, fill = variable)) +
-  geom_density(data = subset(long_data_delta, variable == "delta_unif"), 
-               aes(x = value, fill = variable), alpha = 0.95) +
-  geom_density(data = subset(long_data_delta, variable == "delta_opt"), 
-               aes(x = value, fill = variable), alpha = 0.8) +
-  labs(x = expression("Values of "* delta), y = "Posterior Density") +
-  scale_fill_manual(values = c("#D55E00", "grey20"), 
-                    name = "Prior: ",
-                    labels = c("Optimal", "Default")) +
-  geom_errorbarh(aes(xmin = hpdi_delta_opt[1], xmax = hpdi_delta_opt[2], y = 15 * 1.15, height = 0.15), 
-                 color = "#D55E00", alpha = 1, size = 0.5) +
-  geom_errorbarh(aes(xmin = hpdi_delta_unif[1], xmax = hpdi_delta_unif[2], y = 15 * 1.05, height = 0.15), 
-                 color = "grey20", alpha = 1, size = 0.5) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5),
-        legend.position = "top")
-
-# Print the plot
-print(plot_delta)
+# 
+# # Delta plot
+# long_data_delta <- gather(data_parameter_post, key = "variable", value = "value", 
+#                           delta_opt, delta_unif)
+# hpdi_delta_opt <- rethinking::HPDI( data_parameter_post$delta_opt, prob = 0.95)
+# hpdi_delta_unif <- rethinking::HPDI( data_parameter_post$delta_unif, prob = 0.95)
+# plot_delta <- ggplot(long_data_delta, aes(x = value, fill = variable)) +
+#   geom_density(data = subset(long_data_delta, variable == "delta_unif"), 
+#                aes(x = value, fill = variable), alpha = 0.95) +
+#   geom_density(data = subset(long_data_delta, variable == "delta_opt"), 
+#                aes(x = value, fill = variable), alpha = 0.8) +
+#   labs(x = expression("Values of "* delta), y = "Posterior Density") +
+#   scale_fill_manual(values = c("#D55E00", "grey20"), 
+#                     name = "Prior: ",
+#                     labels = c("Optimal", "Default")) +
+#   geom_errorbarh(aes(xmin = hpdi_delta_opt[1], xmax = hpdi_delta_opt[2], y = 15 * 1.15, height = 0.15), 
+#                  color = "#D55E00", alpha = 1, size = 0.5) +
+#   geom_errorbarh(aes(xmin = hpdi_delta_unif[1], xmax = hpdi_delta_unif[2], y = 15 * 1.05, height = 0.15), 
+#                  color = "grey20", alpha = 1, size = 0.5) +
+#   theme_minimal() +
+#   theme(plot.title = element_text(hjust = 0.5),
+#         legend.position = "top")
+# 
+# # Print the plot
+# print(plot_delta)
 
 
 
 #   ____________________________________________________________________________
-#   Plots  with facet_wrap                                                  ####
+#   Plots with facet_wrap                                                   ####
 
 
 data_combined <- bind_rows(

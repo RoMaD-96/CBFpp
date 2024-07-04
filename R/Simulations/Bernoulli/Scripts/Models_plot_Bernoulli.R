@@ -98,8 +98,9 @@ bf_fun <- function(delta_seq, y, N, y_0, N_0, p, q, eta_null, nu_null, eta_alt, 
 #   ____________________________________________________________________________
 #   Load all the quantities of interest                                     ####
 
-# Define the function to process the datasets in a specific directory
+# Function to process the datasets in a specific directory
 process_datasets <- function() {
+  
   # Define the path to the directory
   path <- "R/Simulations/Bernoulli/RData"
   
@@ -107,15 +108,14 @@ process_datasets <- function() {
   files <- list.files(path, pattern = "\\.RData$", full.names = TRUE)
   files <- gtools::mixedsort(files)
   hpdi <- c(0.75)
-  # Initialize a list to store results
+
   results <- list()
   delta_post <- list()
-  # Loop through each file
+  
   for (file in files) {
-    # Load the dataset
-    load(file)
+
+      load(file)
     
-    # Assuming the data is loaded into 'bf_data'
     # Reshape the data into long format
     bf_data_long <- bf_data %>%
       mutate(row_id = row_number()) %>%
@@ -196,7 +196,6 @@ process_datasets <- function() {
   return(results)
 }
 
-# To run the function
 results_opt_beta <- process_datasets()
 
 
@@ -216,16 +215,11 @@ flatten_results <- function(results_list) {
   return(flattened)
 }
 
-# Convert the nested list into a flattened DataFrame
+# Convert the nested list into a flattened Dataframe
 results_df <- flatten_results(results_opt_beta)
 
-# results_delta_post <- flatten_results(results_opt_beta$delta_post)
-# results_delta_post <- data.frame(t(results_delta_post[-1]))
-# prior <- c(rep("Uniform", 998), rep("CBF", 998))
-# results_delta_post$prior <- prior
 
 
-# Ensure the column names are correct
 correct_col_names <- c("file", "opt_index", "eta", "nu", "theta_dif",
                        "first_q", "median", "third_q", "mean", "hpdi_val",
                        "sd_theta_ref", "sd_theta_alter",
@@ -255,15 +249,14 @@ results_df <- as_tibble(results_df)
 #   ____________________________________________________________________________
 #   Plots                                                                   ####
 
-# Custom titles for facets
 facet_titles <- setNames(c("75% HPDI"), levels(results_df$hpdi_val))
-# Your ggplot code with corrected facet titles
+
+
 binomial_comp <- ggplot(results_df, aes(x = theta_dif, y = median, color = hpdi_val, group = hpdi_val)) +
   geom_point(size=2) +
   geom_line(size=1) +
   geom_errorbar(aes(ymin = first_q, ymax = third_q), width = 0.46, size = 1.4) +
   geom_text(aes(y = third_q, label = paste("(", eta, ",", nu, ")")), vjust = -0.8, hjust = -0.1, angle = 60, size = 4.3, check_overlap = FALSE) +
-  #facet_wrap(~ hpdi_val, ncol = 1, scales = "free_y", labeller = labeller(hpdi_val = facet_titles)) +
   theme_bw(base_size = 16) +
   theme(
     legend.position = "none",
@@ -272,9 +265,8 @@ binomial_comp <- ggplot(results_df, aes(x = theta_dif, y = median, color = hpdi_
     axis.title.y = element_text(size = 22, face = "bold"),
     panel.grid.major.x = element_blank(),
     axis.text.y = element_text(size = 18),
-    axis.text.x = element_text(size = 18, angle = 0, vjust = 1)) + # Adjust the angle and vertical alignment here
+    axis.text.x = element_text(size = 18, angle = 0, vjust = 1)) + 
   labs(
-    #title = expression("Gaussian with unknown mean " * mu),
     x = expression("Values of " * (y-y[0])),
     y = expression("Values of  " *  pi[0](delta)[CBF]),
     color = "HPDI"
@@ -292,11 +284,10 @@ ggsave(filename = "binomial_comp.pdf",path = "Plots", plot = binomial_comp,
 
 
 df_long <- pivot_longer(results_df, cols = c(sd_theta_ref, sd_theta_alter), names_to = "sd_type", values_to = "value")
-# Now create the plot
+
 standard_dev_plot <- ggplot(df_long, aes(x = theta_dif, y = value, color = sd_type, shape = sd_type, group = sd_type)) +
   geom_point(position = position_dodge(width = 0), size = 3.8) +
   geom_line(position = position_dodge(width = 0), size = 1.5) +
-  #facet_wrap(~ hpdi_val, scales = "free", labeller = labeller(hpdi_val = facet_titles)) +
   scale_color_manual(values = c("#8A0910", "#0072B2"), 
                      labels = c("CBF", "Uniform")) +
   scale_shape_manual(values = c(20, 18), 
@@ -320,7 +311,6 @@ standard_dev_plot <- ggplot(df_long, aes(x = theta_dif, y = value, color = sd_ty
   scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 1), 
                      guide = guide_axis(check.overlap = TRUE))
 
-# Display the plot
 print(standard_dev_plot)
 
 ggsave(filename = "sd_binomial_comp.pdf",path = "Plots", plot = standard_dev_plot,
@@ -330,11 +320,9 @@ ggsave(filename = "sd_binomial_comp.pdf",path = "Plots", plot = standard_dev_plo
 
 df_long_mean <- pivot_longer(results_df, cols = c(mean_theta_ref, mean_theta_alter), names_to = "mean_type", values_to = "value")
 
-# Now create the plot
 mean_plot <- ggplot(df_long_mean, aes(x = theta_dif, y = value, color = mean_type, shape = mean_type, group = mean_type)) +
   geom_point(position = position_dodge(width = 0), size = 3.8) +
   geom_line(position = position_dodge(width = 0), size = 1.5) +
-  #facet_wrap(~ hpdi_val, scales = "free", labeller = labeller(hpdi_val = facet_titles)) +
   scale_color_manual(values = c("#8A0910", "#0072B2"), 
                      labels = c("CBF", "Uniform")) +
   scale_shape_manual(values = c(20, 18), 
@@ -358,14 +346,16 @@ mean_plot <- ggplot(df_long_mean, aes(x = theta_dif, y = value, color = mean_typ
   scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 1), 
                      guide = guide_axis(check.overlap = TRUE))
 
-# Display the plot
 print(mean_plot)
 
 
 
 #   ____________________________________________________________________________
-#   ggarrange Combined Plot                                                 ####
+#   Combined Plot                                                           ####
 
+
+##  ............................................................................
+##  Theta plot                                                              ####
 
 
 
@@ -388,19 +378,7 @@ combined_df <- combined_df %>%
     type %in% c("sd_theta_ref", "mean_theta_ref") ~ "Uniform"
   ))
 
-# # Define the levels for plot_type and convert it to a factor
-# combined_df$plot_type <- factor(combined_df$plot_type, levels = c("Standard Deviation", "Mean"))
-# 
-# #Define facet labels
-# facet_labels <- c(
-#   "Standard Deviation" = expression("SD of " * pi(theta ~ "|" ~ y[0] ~ "," ~ y)),
-#   "Mean" = expression("Mean of " * pi(theta ~ "|" ~ y[0] ~ "," ~ y))
-# )
-# 
-# 
-# levels(combined_df$plot_type) <- facet_labels
 
-# Plot
 combined_plot_theta <- ggplot(combined_df, aes(x = theta_dif, y = value, color = prior, shape = prior, group = interaction(type, plot_type))) +
   geom_point(position = position_dodge(width = 0), size = 3.8) +
   geom_line(position = position_dodge(width = 0), size = 1.5) +
@@ -427,11 +405,13 @@ combined_plot_theta <- ggplot(combined_df, aes(x = theta_dif, y = value, color =
   scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 2), guide = guide_axis(check.overlap = TRUE)) +
   guides(color = guide_legend(title.position = "top"), shape = guide_legend(title.position = "top"))
 
-# Display the plot
 print(combined_plot_theta)
 
 
 
+
+##  ............................................................................
+##  Plot delta                                                              ####
 
 
 
@@ -455,18 +435,7 @@ combined_df <- combined_df %>%
     type %in% c("sd_delta_ref", "mean_delta_ref") ~ "Uniform"
   ))
 
-# # Define the levels for plot_type and convert it to a factor
-# combined_df$plot_type <- factor(combined_df$plot_type, levels = c("Standard Deviation", "Mean"))
-# 
-# # Define facet labels
-# facet_labels <- c(
-#   "Standard Deviation" = expression("Standard Deviation of " * pi(delta ~ "|" ~ y[0] ~ "," ~ y)),
-#   "Mean" = expression("Mean of " * pi(delta ~ "|" ~ y[0] ~ "," ~ y))
-# )
-# 
-# levels(combined_df$plot_type) <- facet_labels
 
-# Plot
 combined_plot_delta <- ggplot(combined_df, aes(x = theta_dif, y = value, color = prior, shape = prior, group = interaction(type, plot_type))) +
   geom_point(position = position_dodge(width = 0), size = 3.8) +
   geom_line(position = position_dodge(width = 0), size = 1.5) +
@@ -493,8 +462,13 @@ combined_plot_delta <- ggplot(combined_df, aes(x = theta_dif, y = value, color =
   scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 2), guide = guide_axis(check.overlap = TRUE)) +
   guides(color = guide_legend(title.position = "top"), shape = guide_legend(title.position = "top"))
 
-# Display the plot
 print(combined_plot_delta)
+
+
+
+
+##  ............................................................................
+##  Combined plot for theta and delta                                       ####
 
 
 plot_comb_delta_theta <- ggarrange(combined_plot_theta, combined_plot_delta, ncol = 2, nrow = 1, 
@@ -505,148 +479,4 @@ plot_comb_delta_theta <- annotate_figure(plot_comb_delta_theta, left = textGrob(
 
 ggsave(filename = "combined_plot_binomial.pdf",path = "Plots", plot = plot_comb_delta_theta,
        width = 15, height = 10, device='pdf', dpi=500, useDingbats = FALSE)
-
-
-
-#   ____________________________________________________________________________
-#   Plot facet Delta and Theta                                              ####
-
-# 
-# # Combine the data for theta
-# df_long_sd_theta <- pivot_longer(results_df, cols = c(sd_theta_ref, sd_theta_alter), names_to = "type", values_to = "value")
-# df_long_sd_theta <- df_long_sd_theta %>%
-#   mutate(plot_type = "Standard Deviation", facet_type = "Theta")
-# 
-# df_long_mean_theta <- pivot_longer(results_df, cols = c(mean_theta_ref, mean_theta_alter), names_to = "type", values_to = "value")
-# df_long_mean_theta <- df_long_mean_theta %>%
-#   mutate(plot_type = "Mean", facet_type = "Theta")
-# 
-# # Combine the data for delta
-# df_long_sd_delta <- pivot_longer(results_df, cols = c(sd_delta_ref, sd_delta_alter), names_to = "type", values_to = "value")
-# df_long_sd_delta <- df_long_sd_delta %>%
-#   mutate(plot_type = "Standard Deviation", facet_type = "Delta")
-# 
-# df_long_mean_delta <- pivot_longer(results_df, cols = c(mean_delta_ref, mean_delta_alter), names_to = "type", values_to = "value")
-# df_long_mean_delta <- df_long_mean_delta %>%
-#   mutate(plot_type = "Mean", facet_type = "Delta")
-# 
-# # Combine both data frames
-# combined_df <- bind_rows(df_long_sd_theta, df_long_mean_theta, df_long_sd_delta, df_long_mean_delta)
-# 
-# # Add the new column 'prior'
-# combined_df <- combined_df %>%
-#   mutate(prior = case_when(
-#     type %in% c("sd_theta_alter", "mean_theta_alter", "sd_delta_alter", "mean_delta_alter") ~ "CBF",
-#     type %in% c("sd_theta_ref", "mean_theta_ref", "sd_delta_ref", "mean_delta_ref") ~ "Uniform"
-#   ))
-# 
-# # Define the levels for plot_type and convert it to a factor
-# combined_df$plot_type <- factor(combined_df$plot_type, levels = c("Standard Deviation", "Mean"))
-# 
-# # Define facet labels
-# facet_labels <- c(
-#   "Standard Deviation" = expression("Standard Deviation of " * pi(theta ~ "|" ~ y[0] ~ "," ~ y)),
-#   "Mean" = expression("Mean of " * pi(theta ~ "|" ~ y[0] ~ "," ~ y))
-# )
-# 
-# levels(combined_df$plot_type) <- facet_labels
-# 
-# # Plot
-# combined_plot <- ggplot(combined_df, aes(x = theta_dif, y = value, color = prior, shape = prior, group = interaction(type, plot_type))) +
-#   geom_point(position = position_dodge(width = 0), size = 3.8) +
-#   geom_line(position = position_dodge(width = 0), size = 1.5) +
-#   facet_grid(facet_type ~ plot_type, scales = "free", labeller = label_parsed) +
-#   scale_color_manual(values = c("#8A0910", "#0072B2"), labels = c("CBF", "Uniform")) +
-#   scale_shape_manual(values = c(20, 18), labels = c("CBF", "Uniform")) +
-#   theme_bw(base_size = 16) +
-#   labs(x = expression("Values of " * (y-y[0])),
-#        y = "Posterior Values", 
-#        color = expression(bold("Prior for " * delta * ":")), 
-#        shape = expression(bold("Prior for " * delta * ":"))) +
-#   theme(
-#     axis.text.x = element_text(size = 18, angle = 0, vjust = 1),
-#     plot.title = element_text(hjust = 0.5, size = 22),
-#     axis.title.x = element_text(size = 20),
-#     axis.title.y = element_text(size = 20),
-#     panel.grid.major.x = element_blank(),
-#     axis.text.y = element_text(size = 18),
-#     legend.position = "top",
-#     legend.title = element_text(size = 18),
-#     legend.text = element_text(size = 18),
-#     legend.box = "horizontal"
-#   ) +
-#   scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 2), guide = guide_axis(check.overlap = TRUE)) +
-#   guides(color = guide_legend(title.position = "top"), shape = guide_legend(title.position = "top"))
-# 
-# # Display the plot
-# print(combined_plot)
-# 
-# 
-# 
-# ggsave(filename = "combined_plot.pdf",path = "Plots", plot = combined_plot,
-#        width = 15, height = 14, device='pdf', dpi=500, useDingbats = FALSE)
-# 
-# 
-# 
-
-
-
-
-
-
-
-
-
-
-################################################################################
-
-df_long_mean_delta <- pivot_longer(results_df, cols = c(mean_delta_ref, mean_delta_alter), names_to = "mean_type", values_to = "value")
-
-# Now create the plot
-mean_delta_plot <- ggplot(df_long_mean_delta, aes(x = theta_dif, y = value, color = mean_type, shape = mean_type, group = mean_type)) +
-  geom_point(position = position_dodge(width = 0), size = 3.8) +
-  geom_line(position = position_dodge(width = 0), size = 1.5) +
-  #facet_wrap(~ hpdi_val, scales = "free", labeller = labeller(hpdi_val = facet_titles)) +
-  scale_color_manual(values = c("#8A0910", "#0072B2"), 
-                     labels = c("CBF", "Uniform")) +
-  scale_shape_manual(values = c(20, 18), 
-                     labels = c("CBF", "Uniform")) +
-  theme_bw(base_size = 16) +
-  labs(x = expression("Values of " * (mu[r]-mu[o])), 
-       y = expression("Mean of " * pi(delta ~ "|" ~ y[0] ~ "," ~ y)), 
-       color = expression(bold(paste("Prior for ", delta, ":"))), 
-       shape = expression(bold(paste("Prior for ", delta, ":")))) +
-  theme(
-    axis.text.x = element_text(size = 18, angle = 0, vjust = 1),
-    plot.title = element_text(hjust = 0.5, size = 22),
-    axis.title.x = element_text(size = 20, face = "bold"),
-    axis.title.y = element_text(size = 20, face = "bold"),
-    panel.grid.major.x = element_blank(),
-    axis.text.y = element_text(size = 18),
-    legend.position = "top",
-    legend.title = element_text(size = 18, face = "bold"),
-    legend.text = element_text(size = 18),
-  ) +
-  scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 1), 
-                     guide = guide_axis(check.overlap = TRUE))
-
-# Display the plot
-print(mean_delta_plot)
-
-
-
-
-
-
-
-
-
-
-
-
-plot_comb <- ggarrange(binomial_comp, standard_dev_plot, ncol = 1, nrow = 2, 
-                       common.legend = FALSE, heights = c(1.5,1))
-
-ggsave(filename = "plot_comb_binomial_comp.pdf",path = "Plots", plot = plot_comb,
-       width = 15, height = 14, device='pdf', dpi=500, useDingbats = FALSE)
 

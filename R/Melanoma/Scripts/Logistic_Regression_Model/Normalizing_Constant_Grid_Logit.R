@@ -12,13 +12,11 @@ packages <- c(
   "bayesplot",
   "mgcv")
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
 rstan_options(auto_write = TRUE)
@@ -44,10 +42,11 @@ historical_data <- E2696
 #   STAN Parameter Configuration                                            ####
 
 N_0 <- nrow(historical_data)
-X_0 <- cbind(historical_data$age, # x1 - age 
-            historical_data$treatment, # x2 - treatment
-            historical_data$sex, # x4 race
-            historical_data$perform # x4 cd4
+X_0 <- cbind(historical_data$age,  
+            historical_data$treatment, 
+            historical_data$sex, 
+            historical_data$perform 
+            
 )
 #   ____________________________________________________________________________
 #   Power Prior Sampling Estimates                                          ####

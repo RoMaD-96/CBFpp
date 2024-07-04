@@ -10,13 +10,11 @@ packages <- c(
   "modi",
   "overlapping")
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
 #   ____________________________________________________________________________
@@ -248,7 +246,6 @@ file_name <- paste0("Gaussian_", formatC(M, format = "f", digits = 2), ".RData")
 # Combine the path and file name to create a full file path
 full_file_path <- file.path(path, file_name)
 
-# Save the workspace to the specified path
 save.image(file = full_file_path)
 
 }

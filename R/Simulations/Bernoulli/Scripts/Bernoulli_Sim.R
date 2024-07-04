@@ -9,13 +9,11 @@ packages <- c(
   "colorspace",
   "modi")
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
 #   ____________________________________________________________________________
@@ -103,6 +101,7 @@ for (M in 1:length(par_seq)) {
 
 #   ____________________________________________________________________________
 #   Data                                                                    ####
+  
 set.seed(4231)
 # Historical Data Parameters
 N_0 <- 100
@@ -117,13 +116,7 @@ p <- y / N
 
 
 df <- rbind(data.frame(binom=rbinom(N_0, y_0, p_0), binomial.p='Historical') , data.frame(binom=rbinom(N, y, p), binomial.p='Current'))
-library(ggplot2)
-ggplot(df, aes(binom, fill=binomial.p)) + 
-  geom_histogram(position = 'dodge', binwidth = 0.50) + 
-  xlab('Number of success') +
-  theme_light()
 
-#final.plot(list(y=rnorm(1000,true_theta,true_se), y_0=rnorm(1000,true_theta_0, true_se_0)))
 
 #   ____________________________________________________________________________
 #   Model and Grids Specification                                           ####
@@ -217,7 +210,6 @@ file_name <- paste0("Bernoulli_", formatC(M, format = "f", digits = 2), ".RData"
 # Combine the path and file name to create a full file path
 full_file_path <- file.path(path, file_name)
 
-# Save the workspace to the specified path
 save.image(file = full_file_path)
 
 }

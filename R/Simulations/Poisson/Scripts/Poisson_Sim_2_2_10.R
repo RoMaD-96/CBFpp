@@ -17,13 +17,11 @@ packages <- c(
 )
 
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
 
@@ -35,7 +33,6 @@ source("R/CBF_Functions.R")
 eta <- round(seq(0.5, 6, length.out = 12),2)
 nu <- round(seq(0.5, 6, length.out = 12),2)
 grid <- as.data.frame(expand.grid(x = eta, y = nu))
-# grid <- as.data.frame(expand.grid(x = c(0.5:6), y = c(0.5:6)))
 model_id <- seq(1,nrow(grid))
 grid <- cbind(grid,model_id)
 model_id <- model_id[-14]

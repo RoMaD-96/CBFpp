@@ -18,13 +18,11 @@ packages <- c(
   "readxl"
 )
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
 
 
@@ -69,18 +67,18 @@ plot(fit_gam)
 
 
 N_0 <- nrow(historical_data)
-X0 <- cbind(historical_data$age, # x1 - age 
-             historical_data$treatment, # x2 - treatment
-             historical_data$sex, # x4 race
-             historical_data$perform # x4 cd4
+X0 <- cbind(historical_data$age, 
+             historical_data$treatment, 
+             historical_data$sex,
+             historical_data$perform
 )
 
 
 N <- nrow(current_data)
-X <- cbind(current_data$age, # x1 - age 
-           current_data$treatment, # x2 - treatment
-           current_data$sex, # x4 race
-           current_data$perform # x4 cd4
+X <- cbind(current_data$age,
+           current_data$treatment, 
+           current_data$sex, 
+           current_data$perform
 )
 
 
@@ -136,7 +134,7 @@ n_it_obs_bf <- nrow(combinations)
 cores <- detectCores()
 
 # Register the parallel backend
-plan(multisession, workers = 12)
+plan(multicore, workers = 12)
 
 # Run the loop in parallel
 opts <- list(packages = c("bridgesampling","rstan"),
@@ -245,7 +243,6 @@ code_block <- function(portion_rep, iteration) {
   
   print("Doing Parallel CBF Simulations")
   
-  # Create lists
   bf_list <- list()
   # Define number of iterations
   n_iterations <- nrow(df_obs_bf_pos)
@@ -255,7 +252,7 @@ code_block <- function(portion_rep, iteration) {
   cores <- detectCores()
   
   # Register the parallel backend
-  plan(multisession, workers = 14)
+  plan(multicore, workers = 14)
   
   # Run the loop in parallel
   opts <- list(progress = progress,
