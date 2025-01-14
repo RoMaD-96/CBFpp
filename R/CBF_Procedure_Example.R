@@ -7,20 +7,15 @@ packages <- c(
   "tidyverse"
 )
 
-# Install packages not yet installed
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
   install.packages(packages[!installed_packages])
 }
 
-# Packages loading
 invisible(lapply(packages, library, character.only = TRUE))
-
-
 
 #   ____________________________________________________________________________
 #   Illustrative example plot                                               ####
-
 
 
 # Data frame for the x values
@@ -58,17 +53,15 @@ df <- expand.grid(x = x_values, Distribution = distributions$Distribution) %>%
     Distribution == "LogBF[0][3]" ~ dnorm(x, mean = 2, sd = sqrt(1))
   ))
 
-
-# Color palette
-colors <-c("#7570B3", "#D95F02" , "#1B9E77") 
+colors <- c("#7570B3", "#D95F02" , "#1B9E77") 
 
 # Plot
 cbf_example <- ggplot(df, aes(x = x, y = Density)) +
   geom_line(aes(color = Distribution)) +
   geom_area(data = df %>% filter(x > 0), aes(x = x, y = Density, fill = Distribution), alpha = 0.3) +
-  geom_vline(xintercept = 0, linetype = "dotted", size = 1.05) +
-  geom_vline(data = distributions, aes(xintercept = lower, color = Distribution), linetype = "dashed", size = 1.05) +
-  geom_vline(data = distributions, aes(xintercept = upper, color = Distribution), linetype = "dashed", size = 1.05) +
+  geom_vline(xintercept = 0, linetype = "dotted", linewidth = 1.05) +
+  geom_vline(data = distributions, aes(xintercept = lower, color = Distribution), linetype = "dashed", linewidth = 1.05) +
+  geom_vline(data = distributions, aes(xintercept = upper, color = Distribution), linetype = "dashed", linewidth = 1.05) +
   geom_point(data = cross_points, aes(x = x, y = 0), shape = 4, size = 4.5, stroke = 1, color = "black") +
   facet_wrap(~ Distribution, scales = "free_y", nrow = 3, labeller = label_parsed) +
   scale_fill_manual(values = setNames(colors, distributions$Distribution)) +
