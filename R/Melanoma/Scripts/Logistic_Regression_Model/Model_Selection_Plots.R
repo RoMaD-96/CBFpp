@@ -55,7 +55,7 @@ bf_data_long <- bf_data_rep %>%
 df_obs_bf <- filter(df_obs_bf, obs_bf >= 0)
 optimal_model_index <- calculate_maximized_value(bf_data_long$Value, df_obs_bf$obs_bf, 0.75)
 
-grid[optimal_model_index,]
+grid[optimal_model_index, ]
 
 #   ____________________________________________________________________________
 #   Datasets                                                                ####
@@ -70,7 +70,7 @@ all_data <- list(current_data, historical_data)
 
 formula <- failind ~ age + treatment + sex + perform
 p <- length(attr(terms(formula), "term.labels"))
-family <- binomial('logit')
+family <- binomial("logit")
 
 #   ____________________________________________________________________________
 #   Approximate normalizing constant                                        ####
@@ -86,7 +86,7 @@ if (requireNamespace("parallel")) {
     }
     cl <- parallel::makeCluster(10)
     parallel::clusterSetRNGStream(cl, 123)
-    parallel::clusterExport(cl, varlist = c('formula', 'family', 'historical_data'))
+    parallel::clusterExport(cl, varlist = c("formula", "family", "historical_data"))
     time.npp.1 <- system.time(
       a0.lognc <- parLapply(
         cl = cl, X = a0, fun = logncfun, iter_warmup = 1000,
@@ -109,7 +109,7 @@ model_npp_mix <- glm.npp_mix(
   formula = formula, family = family, data.list = all_data,
   a0.lognc = a0.lognc$a0,
   lognc = matrix(a0.lognc$lognc, ncol = 1),
-  a0.shape1 = 0.5, 
+  a0.shape1 = 0.5,
   a0.shape2 = 6,
   iter_warmup = 1000, iter_sampling = 1000,
   chains = 4, parallel_chains = 4,
@@ -123,7 +123,7 @@ model_opt_bf <- glm.npp(
   formula = formula, family = family, data.list = all_data,
   a0.lognc = a0.lognc$a0,
   lognc = matrix(a0.lognc$lognc, ncol = 1),
-  a0.shape1 = 5, 
+  a0.shape1 = 5,
   a0.shape2 = 0.5,
   iter_warmup = 1000, iter_sampling = 1000,
   chains = 4, parallel_chains = 4,
@@ -137,7 +137,7 @@ model_mse <- glm.npp(
   formula = formula, family = family, data.list = all_data,
   a0.lognc = a0.lognc$a0,
   lognc = matrix(a0.lognc$lognc, ncol = 1),
-  a0.shape1 = 6, 
+  a0.shape1 = 6,
   a0.shape2 = 0.5,
   iter_warmup = 1000, iter_sampling = 1000,
   chains = 4, parallel_chains = 4,
@@ -151,7 +151,7 @@ model_unif <- glm.npp(
   formula = formula, family = family, data.list = all_data,
   a0.lognc = a0.lognc$a0,
   lognc = matrix(a0.lognc$lognc, ncol = 1),
-  a0.shape1 = 1, a0.shape2 = 1, 
+  a0.shape1 = 1, a0.shape2 = 1,
   iter_warmup = 1000, iter_sampling = 1000,
   chains = 4, parallel_chains = 4,
   refresh = 100, seed = 433
@@ -164,7 +164,7 @@ model_jeffreys <- glm.npp(
   formula = formula, family = family, data.list = all_data,
   a0.lognc = a0.lognc$a0,
   lognc = matrix(a0.lognc$lognc, ncol = 1),
-  a0.shape1 = 0.5, a0.shape2 = 0.5, 
+  a0.shape1 = 0.5, a0.shape2 = 0.5,
   iter_warmup = 1000, iter_sampling = 1000,
   chains = 4, parallel_chains = 4,
   refresh = 100, seed = 433
@@ -210,11 +210,11 @@ model_CP <- glm.commensurate(
 ##  Self-Adapting Mixture Prior (SAMP)                                      ####
 
 N_0 <- nrow(historical_data)
-y_0 <- nrow(historical_data[historical_data$failind == 1,])
+y_0 <- nrow(historical_data[historical_data$failind == 1, ])
 p_0 <- y_0 / N_0
 
 N <- nrow(current_data)
-y <- nrow(current_data[current_data$failind == 1,])
+y <- nrow(current_data[current_data$failind == 1, ])
 
 alpha_h <- y_0 + 1
 beta_h <- N_0 + 1 - y_0
@@ -245,8 +245,8 @@ data_parameter_post <- data.frame(
   age_beta_RMAP = model_RMAP$post.samples$age,
   age_beta_SAMP = model_SAMP$post.samples$age,
   age_beta_CP = model_CP$age,
-  age_beta_npp_mix = model_npp_mix$age,  
-  
+  age_beta_npp_mix = model_npp_mix$age,
+
   # Treatment Parameter Estimates
   treat_beta_opt = model_opt_bf$treatment,
   treat_beta_unif = model_unif$treatment,
@@ -255,8 +255,8 @@ data_parameter_post <- data.frame(
   treat_beta_RMAP = model_RMAP$post.samples$treatment,
   treat_beta_SAMP = model_SAMP$post.samples$treatment,
   treat_beta_CP = model_CP$treatment,
-  treat_beta_npp_mix = model_npp_mix$treatment,  
-  
+  treat_beta_npp_mix = model_npp_mix$treatment,
+
   # Sex Parameter Estimates
   sex_beta_opt = model_opt_bf$sex,
   sex_beta_unif = model_unif$sex,
@@ -265,8 +265,8 @@ data_parameter_post <- data.frame(
   sex_beta_RMAP = model_RMAP$post.samples$sex,
   sex_beta_SAMP = model_SAMP$post.samples$sex,
   sex_beta_CP = model_CP$sex,
-  sex_beta_npp_mix = model_npp_mix$sex,  
-  
+  sex_beta_npp_mix = model_npp_mix$sex,
+
   # Performance Parameter Estimates
   perform_beta_opt = model_opt_bf$perform,
   perform_beta_unif = model_unif$perform,
@@ -275,18 +275,18 @@ data_parameter_post <- data.frame(
   perform_beta_RMAP = model_RMAP$post.samples$perform,
   perform_beta_SAMP = model_SAMP$post.samples$perform,
   perform_beta_CP = model_CP$perform,
-  perform_beta_npp_mix = model_npp_mix$perform,  
-  
+  perform_beta_npp_mix = model_npp_mix$perform,
+
   # Delta Parameter Estimates
   delta_opt = model_opt_bf$a0_hist_1,
   delta_unif = model_unif$a0_hist_1,
-  delta_opt_jeffreys = model_jeffreys$a0_hist_1, 
+  delta_opt_jeffreys = model_jeffreys$a0_hist_1,
   delta_beta_2 = model_beta_2$a0_hist_1,
-  delta_npp_mix = model_npp_mix$a0_hist_1  
+  delta_npp_mix = model_npp_mix$a0_hist_1
 )
 
 
-# HPDI 
+# HPDI
 # Calculate HPDIs for Age Parameters
 hpdi_age_opt <- HPDI(data_parameter_post$age_beta_opt, prob = 0.95)
 hpdi_age_unif <- HPDI(data_parameter_post$age_beta_unif, prob = 0.95)
@@ -295,7 +295,7 @@ hpdi_age_beta_2 <- HPDI(data_parameter_post$age_beta_2, prob = 0.95)
 hpdi_age_RMAP <- HPDI(data_parameter_post$age_beta_RMAP, prob = 0.95)
 hpdi_age_SAMP <- HPDI(data_parameter_post$age_beta_SAMP, prob = 0.95)
 hpdi_age_CP <- HPDI(data_parameter_post$age_beta_CP, prob = 0.95)
-hpdi_age_npp_mix <- HPDI(data_parameter_post$age_beta_npp_mix, prob = 0.95)  
+hpdi_age_npp_mix <- HPDI(data_parameter_post$age_beta_npp_mix, prob = 0.95)
 
 # Calculate HPDIs for Treatment Parameters
 hpdi_treat_opt <- HPDI(data_parameter_post$treat_beta_opt, prob = 0.95)
@@ -305,7 +305,7 @@ hpdi_treat_beta_2 <- HPDI(data_parameter_post$treat_beta_2, prob = 0.95)
 hpdi_treat_RMAP <- HPDI(data_parameter_post$treat_beta_RMAP, prob = 0.95)
 hpdi_treat_SAMP <- HPDI(data_parameter_post$treat_beta_SAMP, prob = 0.95)
 hpdi_treat_CP <- HPDI(data_parameter_post$treat_beta_CP, prob = 0.95)
-hpdi_treat_npp_mix <- HPDI(data_parameter_post$treat_beta_npp_mix, prob = 0.95)  
+hpdi_treat_npp_mix <- HPDI(data_parameter_post$treat_beta_npp_mix, prob = 0.95)
 
 # Calculate HPDIs for Sex Parameters
 hpdi_sex_opt <- HPDI(data_parameter_post$sex_beta_opt, prob = 0.95)
@@ -315,7 +315,7 @@ hpdi_sex_beta_2 <- HPDI(data_parameter_post$sex_beta_2, prob = 0.95)
 hpdi_sex_RMAP <- HPDI(data_parameter_post$sex_beta_RMAP, prob = 0.95)
 hpdi_sex_SAMP <- HPDI(data_parameter_post$sex_beta_SAMP, prob = 0.95)
 hpdi_sex_CP <- HPDI(data_parameter_post$sex_beta_CP, prob = 0.95)
-hpdi_sex_npp_mix <- HPDI(data_parameter_post$sex_beta_npp_mix, prob = 0.95)  
+hpdi_sex_npp_mix <- HPDI(data_parameter_post$sex_beta_npp_mix, prob = 0.95)
 
 # Calculate HPDIs for Performance Parameters
 hpdi_perform_opt <- HPDI(data_parameter_post$perform_beta_opt, prob = 0.95)
@@ -325,20 +325,22 @@ hpdi_perform_beta_2 <- HPDI(data_parameter_post$perform_beta_2, prob = 0.95)
 hpdi_perform_RMAP <- HPDI(data_parameter_post$perform_beta_RMAP, prob = 0.95)
 hpdi_perform_SAMP <- HPDI(data_parameter_post$perform_beta_SAMP, prob = 0.95)
 hpdi_perform_CP <- HPDI(data_parameter_post$perform_beta_CP, prob = 0.95)
-hpdi_perform_npp_mix <- HPDI(data_parameter_post$perform_beta_npp_mix, prob = 0.95)  
+hpdi_perform_npp_mix <- HPDI(data_parameter_post$perform_beta_npp_mix, prob = 0.95)
 
 
 # Dataframe for Latex Table
 data_parameter_post_tab <- data.frame(
-  prior = c("Beta(5,0.5)", 
-            "Beta(1,1)", 
-            "Beta(0.5,0.5)", 
-            "Beta(2,2)", 
-            "RMAP", 
-            "SAM", 
-            "CP", 
-            "NPP_Mix"),  # Added NPP_Mix
-  
+  prior = c(
+    "Beta(5,0.5)",
+    "Beta(1,1)",
+    "Beta(0.5,0.5)",
+    "Beta(2,2)",
+    "RMAP",
+    "SAM",
+    "CP",
+    "NPP_Mix"
+  ), # Added NPP_Mix
+
   # Mean Estimates for Age
   mean_age = format(round(c(
     mean(data_parameter_post$age_beta_opt),
@@ -348,9 +350,9 @@ data_parameter_post_tab <- data.frame(
     mean(data_parameter_post$age_beta_RMAP),
     mean(data_parameter_post$age_beta_SAMP),
     mean(data_parameter_post$age_beta_CP),
-    mean(data_parameter_post$age_beta_npp_mix)  
+    mean(data_parameter_post$age_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # Mean Estimates for Treatment
   mean_treat = format(round(c(
     mean(data_parameter_post$treat_beta_opt),
@@ -360,9 +362,9 @@ data_parameter_post_tab <- data.frame(
     mean(data_parameter_post$treat_beta_RMAP),
     mean(data_parameter_post$treat_beta_SAMP),
     mean(data_parameter_post$treat_beta_CP),
-    mean(data_parameter_post$treat_beta_npp_mix)  
+    mean(data_parameter_post$treat_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # Mean Estimates for Sex
   mean_sex = format(round(c(
     mean(data_parameter_post$sex_beta_opt),
@@ -372,9 +374,9 @@ data_parameter_post_tab <- data.frame(
     mean(data_parameter_post$sex_beta_RMAP),
     mean(data_parameter_post$sex_beta_SAMP),
     mean(data_parameter_post$sex_beta_CP),
-    mean(data_parameter_post$sex_beta_npp_mix)  
+    mean(data_parameter_post$sex_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # Mean Estimates for Performance
   mean_perform = format(round(c(
     mean(data_parameter_post$perform_beta_opt),
@@ -384,9 +386,9 @@ data_parameter_post_tab <- data.frame(
     mean(data_parameter_post$perform_beta_RMAP),
     mean(data_parameter_post$perform_beta_SAMP),
     mean(data_parameter_post$perform_beta_CP),
-    mean(data_parameter_post$perform_beta_npp_mix)  
+    mean(data_parameter_post$perform_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # Standard Deviation for Age
   sd_age = format(round(c(
     sd(data_parameter_post$age_beta_opt),
@@ -396,9 +398,9 @@ data_parameter_post_tab <- data.frame(
     sd(data_parameter_post$age_beta_RMAP),
     sd(data_parameter_post$age_beta_SAMP),
     sd(data_parameter_post$age_beta_CP),
-    sd(data_parameter_post$age_beta_npp_mix)  
+    sd(data_parameter_post$age_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # Standard Deviation for Treatment
   sd_treat = format(round(c(
     sd(data_parameter_post$treat_beta_opt),
@@ -408,9 +410,9 @@ data_parameter_post_tab <- data.frame(
     sd(data_parameter_post$treat_beta_RMAP),
     sd(data_parameter_post$treat_beta_SAMP),
     sd(data_parameter_post$treat_beta_CP),
-    sd(data_parameter_post$treat_beta_npp_mix)  
+    sd(data_parameter_post$treat_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # Standard Deviation for Sex
   sd_sex = format(round(c(
     sd(data_parameter_post$sex_beta_opt),
@@ -420,9 +422,9 @@ data_parameter_post_tab <- data.frame(
     sd(data_parameter_post$sex_beta_RMAP),
     sd(data_parameter_post$sex_beta_SAMP),
     sd(data_parameter_post$sex_beta_CP),
-    sd(data_parameter_post$sex_beta_npp_mix)  
+    sd(data_parameter_post$sex_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # Standard Deviation for Performance
   sd_perform = format(round(c(
     sd(data_parameter_post$perform_beta_opt),
@@ -432,9 +434,9 @@ data_parameter_post_tab <- data.frame(
     sd(data_parameter_post$perform_beta_RMAP),
     sd(data_parameter_post$perform_beta_SAMP),
     sd(data_parameter_post$perform_beta_CP),
-    sd(data_parameter_post$perform_beta_npp_mix)  
+    sd(data_parameter_post$perform_beta_npp_mix)
   ), 3), nsmall = 3),
-  
+
   # HPDI for Age Parameters
   hpdi_age = c(
     paste("(", round(hpdi_age_opt[1], 3), ",", round(hpdi_age_opt[2], 3), ")"),
@@ -444,9 +446,9 @@ data_parameter_post_tab <- data.frame(
     paste("(", round(hpdi_age_RMAP[1], 3), ",", round(hpdi_age_RMAP[2], 3), ")"),
     paste("(", round(hpdi_age_SAMP[1], 3), ",", round(hpdi_age_SAMP[2], 3), ")"),
     paste("(", round(hpdi_age_CP[1], 3), ",", round(hpdi_age_CP[2], 3), ")"),
-    paste("(", round(hpdi_age_npp_mix[1], 3), ",", round(hpdi_age_npp_mix[2], 3), ")")  
+    paste("(", round(hpdi_age_npp_mix[1], 3), ",", round(hpdi_age_npp_mix[2], 3), ")")
   ),
-  
+
   # HPDI for Treatment Parameters
   hpdi_treat = c(
     paste("(", round(hpdi_treat_opt[1], 3), ",", round(hpdi_treat_opt[2], 3), ")"),
@@ -456,9 +458,9 @@ data_parameter_post_tab <- data.frame(
     paste("(", round(hpdi_treat_RMAP[1], 3), ",", round(hpdi_treat_RMAP[2], 3), ")"),
     paste("(", round(hpdi_treat_SAMP[1], 3), ",", round(hpdi_treat_SAMP[2], 3), ")"),
     paste("(", round(hpdi_treat_CP[1], 3), ",", round(hpdi_treat_CP[2], 3), ")"),
-    paste("(", round(hpdi_treat_npp_mix[1], 3), ",", round(hpdi_treat_npp_mix[2], 3), ")")  
+    paste("(", round(hpdi_treat_npp_mix[1], 3), ",", round(hpdi_treat_npp_mix[2], 3), ")")
   ),
-  
+
   # HPDI for Sex Parameters
   hpdi_sex = c(
     paste("(", round(hpdi_sex_opt[1], 3), ",", round(hpdi_sex_opt[2], 3), ")"),
@@ -468,9 +470,9 @@ data_parameter_post_tab <- data.frame(
     paste("(", round(hpdi_sex_RMAP[1], 3), ",", round(hpdi_sex_RMAP[2], 3), ")"),
     paste("(", round(hpdi_sex_SAMP[1], 3), ",", round(hpdi_sex_SAMP[2], 3), ")"),
     paste("(", round(hpdi_sex_CP[1], 3), ",", round(hpdi_sex_CP[2], 3), ")"),
-    paste("(", round(hpdi_sex_npp_mix[1], 3), ",", round(hpdi_sex_npp_mix[2], 3), ")")  
+    paste("(", round(hpdi_sex_npp_mix[1], 3), ",", round(hpdi_sex_npp_mix[2], 3), ")")
   ),
-  
+
   # HPDI for Performance Parameters
   hpdi_perform = c(
     paste("(", round(hpdi_perform_opt[1], 3), ",", round(hpdi_perform_opt[2], 3), ")"),
@@ -480,7 +482,7 @@ data_parameter_post_tab <- data.frame(
     paste("(", round(hpdi_perform_RMAP[1], 3), ",", round(hpdi_perform_RMAP[2], 3), ")"),
     paste("(", round(hpdi_perform_SAMP[1], 3), ",", round(hpdi_perform_SAMP[2], 3), ")"),
     paste("(", round(hpdi_perform_CP[1], 3), ",", round(hpdi_perform_CP[2], 3), ")"),
-    paste("(", round(hpdi_perform_npp_mix[1], 3), ",", round(hpdi_perform_npp_mix[2], 3), ")")  
+    paste("(", round(hpdi_perform_npp_mix[1], 3), ",", round(hpdi_perform_npp_mix[2], 3), ")")
   )
 )
 
@@ -553,28 +555,28 @@ error_bars_df <- data.frame(
 )
 
 facet_names <- c(
-  Age = "Age", 
-  Sex = "Sex", 
-  Performance = "Performance Status", 
+  Age = "Age",
+  Sex = "Sex",
+  Performance = "Performance Status",
   Treatment = "Treatment"
 )
 
 fill_colors <- c(
   "CBF"      = "#8A0404",
   "NPP_Mix"  = "#AA4499",
-  "Uniform"  = "#0072B2",  
-  "RMAP"     = "#E69F00",    
-  "SAM"      = "#009E20",   
-  "CP"       = "#484F59"   
+  "Uniform"  = "#0072B2",
+  "RMAP"     = "#E69F00",
+  "SAM"      = "#009E20",
+  "CP"       = "#484F59"
 )
 
 error_bar_colors <- c(
   "CBF"      = "#4B0000",
   "NPP_Mix"  = "#CC79A7",
-  "Uniform"  = "#004C7A",  
-  "RMAP"     = "#A65C00",  
-  "SAM"      = "#006014",  
-  "CP"       = "#1C232C"   
+  "Uniform"  = "#004C7A",
+  "RMAP"     = "#A65C00",
+  "SAM"      = "#006014",
+  "CP"       = "#1C232C"
 )
 
 desired_order <- c("CBF", "NPP_Mix", "Uniform", "RMAP", "SAM", "CP")
@@ -596,7 +598,7 @@ plot_combined <- ggplot(data_combined, aes(x = value, y = prior_type, fill = pri
   scale_fill_manual(values = fill_colors, labels = label_expressions) +
   facet_wrap(~category, scales = "free", labeller = as_labeller(facet_names)) +
   geom_errorbarh(
-    data = error_bars_df, 
+    data = error_bars_df,
     aes(xmin = xmin, xmax = xmax, y = prior_type, color = prior_type),
     inherit.aes = FALSE,
     alpha = 1.0,
@@ -617,7 +619,7 @@ plot_combined <- ggplot(data_combined, aes(x = value, y = prior_type, fill = pri
   scale_color_manual(values = error_bar_colors) +
   scale_y_discrete(labels = label_expressions, expand = c(0.3, 0)) +
   labs(y = "Prior Distribution", x = "Values") +
-  guides(fill = guide_legend(title = expression(bold(paste("Prior: ")))) ) +
+  guides(fill = guide_legend(title = expression(bold(paste("Prior: "))))) +
   theme_bw(base_size = 18) +
   theme(
     legend.position = "top",
@@ -642,7 +644,7 @@ ggsave(
   plot = plot_combined,
   width = 15,
   height = 10,
-  device = 'pdf',
+  device = "pdf",
   dpi = 500,
   useDingbats = FALSE
 )
@@ -657,23 +659,23 @@ sd_diff_all <- data.frame()
 
 for (cat in categories) {
   sd_opt <- sd(data_parameter_post[[paste0(cat, "_beta_opt")]])
-  sd_unif <- sd(data_parameter_post[[paste0(cat, "_beta_unif")]])    
+  sd_unif <- sd(data_parameter_post[[paste0(cat, "_beta_unif")]])
   sd_jeffreys <- sd(data_parameter_post[[paste0(cat, "_beta_jeffreys")]])
   sd_RMAP <- sd(data_parameter_post[[paste0(cat, "_beta_RMAP")]])
   sd_SAMP <- sd(data_parameter_post[[paste0(cat, "_beta_SAMP")]])
   sd_CP <- sd(data_parameter_post[[paste0(cat, "_beta_CP")]])
   sd_mix <- sd(data_parameter_post[[paste0(cat, "_beta_npp_mix")]])
-  
+
   sd_ref <- sd_unif
-  
+
   pct_diff_opt <- (sd_opt / sd_ref - 1) * 100
-  pct_diff_unif <- (sd_unif / sd_ref - 1) * 100  
+  pct_diff_unif <- (sd_unif / sd_ref - 1) * 100
   pct_diff_jeffreys <- (sd_jeffreys / sd_ref - 1) * 100
   pct_diff_RMAP <- (sd_RMAP / sd_ref - 1) * 100
   pct_diff_SAMP <- (sd_SAMP / sd_ref - 1) * 100
   pct_diff_CP <- (sd_CP / sd_ref - 1) * 100
   pct_diff_mix <- (sd_mix / sd_ref - 1) * 100
-  
+
   temp_df <- data.frame(
     category = toupper(cat),
     SDPercentDiff = c(
@@ -687,7 +689,7 @@ for (cat in categories) {
     ),
     prior_type = c("CBF", "Uniform", "Jeffreys", "RMAP", "SAM", "CP", "NPP_Mix")
   )
-  
+
   sd_diff_all <- bind_rows(sd_diff_all, temp_df)
 }
 
@@ -701,20 +703,20 @@ prior_label <- c(
 )
 
 facet_names <- c(
-  "AGE" = "Age", 
-  "SEX" = "Sex", 
-  "PERFORM" = "Performance Status", 
+  "AGE" = "Age",
+  "SEX" = "Sex",
+  "PERFORM" = "Performance Status",
   "TREAT" = "Treatment"
 )
 
 fill_colors <- c(
-  "CBF"      = "#8A0404",  
-  "Uniform"  = "#0072B2",  
-  "Jeffreys" = "#56B4E9",  
-  "RMAP"     = "#E69F00",  
-  "SAM"      = "#009E20",  
-  "CP"       = "#484F59",  
-  "NPP_Mix"  = "#CC79A7"   
+  "CBF"      = "#8A0404",
+  "Uniform"  = "#0072B2",
+  "Jeffreys" = "#56B4E9",
+  "RMAP"     = "#E69F00",
+  "SAM"      = "#009E20",
+  "CP"       = "#484F59",
+  "NPP_Mix"  = "#CC79A7"
 )
 
 sd_diff_all <- sd_diff_all %>%
@@ -736,11 +738,11 @@ sd_diff_filtered <- sd_diff_all %>%
   )
 
 fill_colors_with_grey <- c(
-  "CBF"      = "#8A0404", 
+  "CBF"      = "#8A0404",
   "Jeffreys" = "#56B4E9",
   "RMAP"     = "#E69F00",
   "SAM"      = "#009E20",
-  "CP"       = "#484F59", 
+  "CP"       = "#484F59",
   "NPP_Mix"  = "#CC79A7",
   "GREY"     = "#484F59"
 )
@@ -758,7 +760,7 @@ lollipop <- ggplot(data = sd_diff_filtered, aes(x = prior_type, y = SDPercentDif
   geom_hline(yintercept = 0, linetype = "dotted", size = 1) +
   geom_segment(aes(x = prior_type, xend = prior_type, y = 0, yend = SDPercentDiff), size = 1.5) +
   geom_point(size = 4) +
-  facet_wrap(~ category, scales = "free_y", labeller = as_labeller(facet_names)) +
+  facet_wrap(~category, scales = "free_y", labeller = as_labeller(facet_names)) +
   scale_color_manual(
     values = fill_colors_with_grey,
     labels = prior_label,

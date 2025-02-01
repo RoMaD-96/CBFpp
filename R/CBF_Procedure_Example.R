@@ -23,24 +23,30 @@ x_values <- seq(-7, 7, length.out = 5000)
 
 # Data frame with all distributions
 df <- data.frame(x = x_values) %>%
-  mutate(Dist1 = dnorm(x, mean = -1, sd = sqrt(1)),
-         Dist2 = dnorm(x, mean = 0.5, sd = sqrt(1)),
-         Dist3 = dnorm(x, mean = 2, sd = sqrt(1))) %>%
+  mutate(
+    Dist1 = dnorm(x, mean = -1, sd = sqrt(1)),
+    Dist2 = dnorm(x, mean = 0.5, sd = sqrt(1)),
+    Dist3 = dnorm(x, mean = 2, sd = sqrt(1))
+  ) %>%
   pivot_longer(cols = starts_with("Dist"), names_to = "Distribution", values_to = "Density")
 
 # Means and standard deviations
-distributions <- data.frame(mean = c(-0.5, 0.5, 2), sd = sqrt(1), Distribution = c(paste0("LogBF[0][1]"),
-                                                                                 paste0("LogBF[0][2]"), 
-                                                                                 paste0("LogBF[0][3]")))
+distributions <- data.frame(mean = c(-0.5, 0.5, 2), sd = sqrt(1), Distribution = c(
+  paste0("LogBF[0][1]"),
+  paste0("LogBF[0][2]"),
+  paste0("LogBF[0][3]")
+))
 
 # 75% HPDI for each distribution
 distributions$lower <- qnorm(0.125, distributions$mean, distributions$sd)
 distributions$upper <- qnorm(0.875, distributions$mean, distributions$sd)
 
 # Observed Log-BF
-cross_points <- data.frame(x = c(0.4, -0.2, 2.5), Distribution = c(paste0("LogBF[0][1]"),
-                                                                  paste0("LogBF[0][2]"), 
-                                                                  paste0("LogBF[0][3]")))
+cross_points <- data.frame(x = c(0.4, -0.2, 2.5), Distribution = c(
+  paste0("LogBF[0][1]"),
+  paste0("LogBF[0][2]"),
+  paste0("LogBF[0][3]")
+))
 
 # Data frame for the x values
 x_values <- seq(-5, 5, length.out = 1000)
@@ -53,7 +59,7 @@ df <- expand.grid(x = x_values, Distribution = distributions$Distribution) %>%
     Distribution == "LogBF[0][3]" ~ dnorm(x, mean = 2, sd = sqrt(1))
   ))
 
-colors <- c("#7570B3", "#D95F02" , "#1B9E77") 
+colors <- c("#7570B3", "#D95F02", "#1B9E77")
 
 # Plot
 cbf_example <- ggplot(df, aes(x = x, y = Density)) +
@@ -63,7 +69,7 @@ cbf_example <- ggplot(df, aes(x = x, y = Density)) +
   geom_vline(data = distributions, aes(xintercept = lower, color = Distribution), linetype = "dashed", linewidth = 1.05) +
   geom_vline(data = distributions, aes(xintercept = upper, color = Distribution), linetype = "dashed", linewidth = 1.05) +
   geom_point(data = cross_points, aes(x = x, y = 0), shape = 4, size = 4.5, stroke = 1, color = "black") +
-  facet_wrap(~ Distribution, scales = "free_y", nrow = 3, labeller = label_parsed) +
+  facet_wrap(~Distribution, scales = "free_y", nrow = 3, labeller = label_parsed) +
   scale_fill_manual(values = setNames(colors, distributions$Distribution)) +
   scale_color_manual(values = setNames(colors, distributions$Distribution)) +
   theme_bw(base_size = 18) +
@@ -76,12 +82,16 @@ cbf_example <- ggplot(df, aes(x = x, y = Density)) +
     panel.grid.major.x = element_blank(),
     axis.text.y = element_text(size = 18)
   ) +
-  labs(title = "",
-       x = "LogBF Values",
-       y = "Density") +
+  labs(
+    title = "",
+    x = "LogBF Values",
+    y = "Density"
+  ) +
   guides(fill = FALSE, color = FALSE) # Hide the legend
 
 plot(cbf_example)
 
-ggsave(filename = "CBF_example.pdf",path = "Plots", plot = cbf_example,
-       width = 15, height = 10, device='pdf', dpi=500, useDingbats = FALSE)
+ggsave(
+  filename = "CBF_example.pdf", path = "Plots", plot = cbf_example,
+  width = 15, height = 10, device = "pdf", dpi = 500, useDingbats = FALSE
+)

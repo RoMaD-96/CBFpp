@@ -4,7 +4,8 @@
 packages <- c(
   "repmix",
   "SAMprior",
-  "modi")
+  "modi"
+)
 
 installed_packages <- packages %in% rownames(installed.packages())
 if (any(installed_packages == FALSE)) {
@@ -31,47 +32,51 @@ w_SAM_list <- numeric(length(par_seq))
 
 
 for (M in 1:length(par_seq)) {
-  
   cat("Doing theta =", par_seq[M], "\n")
 
-##  ............................................................................
-##  Data                                                                    ####
-  
-set.seed(4231)
-  
-# Current Data Parameters
-true_theta <- par_seq[M]
-true_se <- 1
+  ##  ............................................................................
+  ##  Data                                                                    ####
 
-##  ............................................................................
-##  Model and Grids Specification                                           ####
-  
-prior_historical <- mixnorm(inf=c(1, 0, 1))
-  
-w_SAM <- SAM_weight(if.prior = prior_historical,
-                      theta.h = 0,
-                      delta = 3,    ## Clinically significant difference
-                      n = 1,
-                      m = true_theta,
-                      sigma = true_se)
-  
-post_theta_mix <- thetaposteriormix(theta = theta_seq, tr = true_theta,
-                                      to = true_theta_0, sr = true_se, so = true_se_0,
-                                      w = w_SAM, m = 0, v = 100)
-  
-sd_theta_sam_mix <- sqrt(weighted.var(theta_seq, post_theta_mix))
-mean_theta_sam_mix <- weighted.mean(theta_seq, post_theta_mix)
-  
-# Store results in the lists
-mean_list[M] <- mean_theta_sam_mix
-sd_list[M] <- sd_theta_sam_mix
-w_SAM_list[M] <- w_SAM
+  set.seed(4231)
 
+  # Current Data Parameters
+  true_theta <- par_seq[M]
+  true_se <- 1
+
+  ##  ............................................................................
+  ##  Model and Grids Specification                                           ####
+
+  prior_historical <- mixnorm(inf = c(1, 0, 1))
+
+  w_SAM <- SAM_weight(
+    if.prior = prior_historical,
+    theta.h = 0,
+    delta = 3, ## Clinically significant difference
+    n = 1,
+    m = true_theta,
+    sigma = true_se
+  )
+
+  post_theta_mix <- thetaposteriormix(
+    theta = theta_seq, tr = true_theta,
+    to = true_theta_0, sr = true_se, so = true_se_0,
+    w = w_SAM, m = 0, v = 100
+  )
+
+  sd_theta_sam_mix <- sqrt(weighted.var(theta_seq, post_theta_mix))
+  mean_theta_sam_mix <- weighted.mean(theta_seq, post_theta_mix)
+
+  # Store results in the lists
+  mean_list[M] <- mean_theta_sam_mix
+  sd_list[M] <- sd_theta_sam_mix
+  w_SAM_list[M] <- w_SAM
 }
 
-SAM_dataset <- data.frame(mean_theta_sam_mix = mean_list,
-                          sd_theta_sam_mix = sd_list,
-                          w_SAM = w_SAM_list)
+SAM_dataset <- data.frame(
+  mean_theta_sam_mix = mean_list,
+  sd_theta_sam_mix = sd_list,
+  w_SAM = w_SAM_list
+)
 
 print(SAM_dataset)
 

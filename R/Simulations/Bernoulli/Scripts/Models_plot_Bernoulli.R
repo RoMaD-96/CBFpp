@@ -584,34 +584,36 @@ binomial_delta_plot <- ggplot(combined_df, aes(x = theta_dif, y = value, color =
     labels = label_expressions,
     name = expression(bold("Prior:"))
   ) +
-  scale_shape_manual(
-    values = cb_shapes,
-    labels = label_expressions,
-    name = expression(bold("Prior:"))
-  ) +
-  theme_bw(base_size = 16) +
-  labs(
-    x = expression("Values of " * (y - y[0])),
-    y = "Posterior Values"
-  ) +
-  theme(
-    axis.text.x = element_text(size = 18, angle = 0, vjust = 1),
-    plot.title = element_text(hjust = 0.5, size = 22),
-    axis.title.x = element_text(size = 20),
-    axis.title.y = element_text(size = 20),
-    panel.grid.major.x = element_blank(),
-    axis.text.y = element_text(size = 18),
-    legend.position = "top",
-    legend.title = element_text(size = 18, face = "bold"),
-    legend.text = element_text(size = 18),
-    strip.text = element_text(size = 16, face = "bold"),
-    panel.grid.major = element_line(color = "grey80"),
-    panel.grid.minor = element_blank()
-  ) +
-  scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 2), guide = guide_axis(check.overlap = TRUE)) +
-  facet_wrap(~ stat_label, scales = "free_y", labeller = label_parsed)
+    scale_shape_manual(
+      values = cb_shapes,
+      labels = label_expressions,
+      name = expression(bold("Prior:"))
+    ) +
+    theme_bw(base_size = 16) +
+    labs(
+      x = expression("Values of " * (y - y[0])),
+      y = "Posterior Values"
+    ) +
+    theme(
+      axis.text.x = element_text(size = 18, angle = 0, vjust = 1),
+      plot.title = element_text(hjust = 0.5, size = 22),
+      axis.title.x = element_text(size = 20),
+      axis.title.y = element_text(size = 20),
+      panel.grid.major.x = element_blank(),
+      axis.text.y = element_text(size = 18),
+      legend.position = "top",
+      legend.title = element_text(size = 18, face = "bold"),
+      legend.text = element_text(size = 18),
+      strip.text = element_text(size = 16, face = "bold"),
+      panel.grid.major = element_line(color = "grey80"),
+      panel.grid.minor = element_blank()
+    ) +
+    scale_x_continuous(breaks = seq(0, max(results_df$theta_dif), 2), guide = guide_axis(check.overlap = TRUE)) +
+    facet_wrap(~stat_label, scales = "free_y", labeller = label_parsed)
 
-print(binomial_delta_plot)
+  print(binomial_delta_plot)
 
-ggsave(filename = "binomial_delta_plot.pdf",path = "Plots", plot = binomial_delta_plot,
-       width = 15, height = 8, device='pdf', dpi=500, useDingbats = FALSE)
+  ggsave(
+    filename = "binomial_delta_plot.pdf", path = "Plots", plot = binomial_delta_plot,
+    width = 15, height = 8, device = "pdf", dpi = 500, useDingbats = FALSE
+  )
